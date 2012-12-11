@@ -1,0 +1,140 @@
+#!/bin/bash
+
+# pushdeploytodatadump
+# Push deploy to data dump
+
+# -------------------------------------------------------------------------------------------------
+# Script which will make the current dev copy of a website a copy of the current beta version.
+# -------------------------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------------------------
+# Logging setup
+# -------------------------------------------------------------------------------------------------
+
+# These lines have been copied from http://stackoverflow.com/questions/3173131/redirect-copy-of-stdout-to-log-file-from-within-bash-script-itself
+# and will send the script output to a log file.
+mkdir -p ~/logs/pullpush
+DATE_TIME=`date +%Y%m%d-%H%M%S`
+logfile=~/logs/pullpush/pushdeploytodatadump_${DATE_TIME}.log
+mkfifo ${logfile}.pipe
+tee < ${logfile}.pipe $logfile &
+exec &> ${logfile}.pipe
+rm ${logfile}.pipe
+
+# -------------------------------------------------------------------------------------------------
+# We are going to bring in a parameter which will be used to pull in a file containing values for
+# variables - this is to prevent users accidentally using someone elses databases and web space.
+# -------------------------------------------------------------------------------------------------
+
+echo
+echo `date`
+echo "Testing for argument..."
+if [ $1 ]
+then
+    echo "Project name argument supplied OK as $1"
+    echo
+else
+    echo "ERROR - No argument supplied"
+    exit -1
+fi
+
+# Check the variables file exists.
+if [ -e ~/.pullpush/${1} ]
+then
+        source ~/.pullpush/$1
+else
+        echo "ERROR - Configuration file $1 not found."
+        exit -1
+fi
+
+# Check the global settings file exists.
+if [ -e /home/pullpush/.pullpush/projects/${1} ]
+then
+        source /home/pullpush/.pullpush/projects/${1}
+else
+        echo "ERROR - Global configuration file $1 not found."
+        exit -1
+fi
+
+PROJECT_NAME=${1}
+
+DATE_TIME=`date +%Y%m%d_%H%M%S`
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Take site offline..."
+# -------------------------------------------------------------------------------------------------
+
+# Future versions of the script will need to pick up if the site is D6 or D7.  It is possible that
+# both of these commands can be run on D6 and D7 safely.
+
+# These are the commands for Drupal 6.
+# drush @${DEV_SITE_NAME} vset --always-set site_offline 1
+# drush @${BETA_SITE_NAME} vset --always-set site_offline 1
+
+# These commands work for Drupal 7.
+drush ${DEPLOY_DRUSH_ALIAS} vset maintenance_mode 1 --yes
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Changing permissions on the files/ directory to enable the script user to be able to work with wwwrun owned files..."
+# -------------------------------------------------------------------------------------------------
+sudo chmod -R 777 ${DEPLOY_DOCUMENT_ROOT}/sites/default/files
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Clearing out the caches on the sites to trim the database and files/ before making the data dump..."
+# -------------------------------------------------------------------------------------------------
+
+# Bear in mind here that we may need to chmod the /files directory to 777 if we are not using Apache-ITK.
+
+# Clear out the caches on the beta site.  As the dev copy will become a copy of the beta site we do
+# not want to pull down all the caches as well.  
+drush ${DEPLOY_DRUSH_ALIAS} cache-clear all
+
+# NB - We do not want to clear out the dev site cache as this deletes directories and this causes the svn 
+# revert command to fail.  By the end of this script the dev copy should be an exact copy of beta and that
+# has had the caches cleared.
+##drush @${DEV_SITE_NAME} cache-clear all
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Make data dump..."
+# -------------------------------------------------------------------------------------------------
+
+#mkdir -p ${BACKUP_LOCATION}
+#mysqldump -u ${DEV_MYSQL_USER} -p${DEV_MYSQL_PASS} ${DEV_MYSQL_DATABASE} > ${BACKUP_LOCATION}${DATE_TIME}_${DEV_MYSQL_DATABASE}.sql
+#tar --create --file=${BACKUP_LOCATION}${DATE_TIME}_${DEV_SITE_NAME}.tar ${DEV_DOCUMENT_ROOT}
+
+ssh deploy@localhost "mkdir -p ${DEPLOY_DATA_DUMP_DIRECTORY}${PROJECT_NAME}"
+ssh deploy@localhost "mysqldump -u ${DEPLOY_MYSQL_USER} -p${DEPLOY_MYSQL_PASS} ${DEPLOY_MYSQL_DATABASE} > ${DEPLOY_DATA_DUMP_DIRECTORY}${PROJECT_NAME}/${DATE_TIME}_${DEPLOY_MYSQL_DATABASE}.sql"
+ssh deploy@localhost "tar --create --file=${DEPLOY_DATA_DUMP_DIRECTORY}${PROJECT_NAME}/${DATE_TIME}_${DEPLOY_SITE_NAME}.tar ${DEPLOY_DOCUMENT_ROOT}"
+
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Bring site back online..."
+# -------------------------------------------------------------------------------------------------
+
+# Future versions of the script will need to pick up if the site is D6 or D7.  It is possible that
+# both of these commands can be run on D6 and D7 safely.
+
+# These are the commands for Drupal 6.
+# drush @${DEV_SITE_NAME} vset --always-set site_offline 1
+# drush @${BETA_SITE_NAME} vset --always-set site_offline 1
+
+# These commands work for Drupal 7.
+drush ${DEPLOY_DRUSH_ALIAS} vset maintenance_mode 0 --yes
+
+
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Finished..."
+# -------------------------------------------------------------------------------------------------

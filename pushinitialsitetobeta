@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# pushinitialsitetobeta
+# Push initial site to beta
+
+# -----------------------------------------------------------------------------------
+# Script which take an initial site from a user and use it to create a new beta site.
+# -----------------------------------------------------------------------------------
+

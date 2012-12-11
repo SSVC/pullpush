@@ -1,0 +1,201 @@
+#!/bin/bash
+
+# pullinitialsitefromsource
+# Pull initial site from source
+
+# ------------------------------------------------------------------------------------------
+# Script which will pull a vanilla site down from online sources and create an initial site.
+# ------------------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------------------------
+# Logging setup
+# -------------------------------------------------------------------------------------------------
+
+# These lines have been copied from http://stackoverflow.com/questions/3173131/redirect-copy-of-stdout-to-log-file-from-within-bash-script-itself
+# and will send the script output to a log file.
+mkdir -p ~/logs/pullpush
+DATE_TIME=`date +%Y%m%d-%H%M%S`
+logfile=~/logs/pullpush/pullinitialsitefromsource_${DATE_TIME}.log
+mkfifo ${logfile}.pipe
+tee < ${logfile}.pipe $logfile &
+exec &> ${logfile}.pipe
+rm ${logfile}.pipe
+
+# -------------------------------------------------------------------------------------------------
+# We are going to bring in a parameter which will be used to pull in a file containing values for
+# variables - this is to prevent users accidentally using someone elses databases and web space.
+# -------------------------------------------------------------------------------------------------
+
+echo
+echo `date`
+echo "Testing for arguments..."
+if [ $1 ]
+then
+    echo "Project type supplied OK as $1"
+    echo
+else
+    echo "ERROR - No project type supplied"
+    exit -1
+fi
+
+if [ $2 ]
+then
+    echo "Initial site name supplied OK as $2"
+    echo
+else
+    echo "ERROR - No initial site name supplied"
+    exit -1
+fi
+
+# Todo
+# Here we need to check that the project type supplied is valid.
+
+
+# Todo
+# Here we need to check that the intial site name has not been used already.
+
+
+
+
+## # Check the variables file exists.
+## if [ -e ~/.pullpush/${1} ]
+## then
+##        source ~/.pullpush/$1
+## else
+##        echo "ERROR - Configuration file $1 not found."
+##        exit -1
+## fi
+
+## # Check the global settings file exists.
+## if [ -e /home/pullpush/.pullpush/projects/${1} ]
+## then
+##        source /home/pullpush/.pullpush/projects/${1}
+## else
+##        echo "ERROR - Global configuration file $1 not found."
+##        exit -1
+## fi
+
+# NB - Here we need to check the branch name is short and that
+# it is unique.
+
+DATE_TIME=`date +%Y%m%d-%H%M%S`
+PROJECT_TYPE=${1}
+INITIAL_SITE_NAME=${2}
+
+
+# =================================
+
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Create database name, user name and password..."
+# -------------------------------------------------------------------------------------------------
+
+# Should possibly use a better tool - but SLES does not have gpw or pwgen available.
+# NB - We need to generate a shortish username to log in to the database as MySQL
+# has a limit on database usernames of 16 characters.
+# NB - It would be good to put hyphens inbetween the parts of the database name but 
+# this causes problems with MySQL.
+DATABASE_NAME=${USER}${PROJECT_TYPE}${INITIAL_SITE_NAME}
+DATABASE_USER=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
+DATABASE_PASSWORD=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Download Drupal site..."
+# -------------------------------------------------------------------------------------------------
+
+# We do this first to make sure the document root exists - otherwise the 'rcapache2 restart' command
+# will produce a warning.
+# mkdir -p ~/projects/${PROJECTS_NAME}/branches
+mkdir -p ~/initial_sites
+cd ~/initial_sites
+
+
+drush dl drupal-7 --drupal-project-rename=${INITIAL_SITE_NAME}
+
+case "$1" in
+    drupal7)
+        echo "This will dl a d7 site."
+        ;;
+    
+    drupal6)
+        echo "This will dl a d6 site."
+        ;;
+    
+    symfony)
+        echo "This will dl a d6 site."
+        ;;
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
+
+
+
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Create web space for the branch site..."
+# -------------------------------------------------------------------------------------------------
+
+sudo cp /etc/apache2/vhosts.d/vhost-drupal.template /etc/apache2/vhosts.d/${USER}-${PROJECT_TYPE}-${INITIAL_SITE_NAME}.dev3.conf
+
+# Modify the template file.
+sudo sed -i "s/username/${USER}/g" /etc/apache2/vhosts.d/${USER}-${PROJECT_TYPE}-${INITIAL_SITE_NAME}.dev3.conf
+sudo sed -i "s/projectname/${PROJECT_TYPE}/g" /etc/apache2/vhosts.d/${USER}-${PROJECT_TYPE}-${INITIAL_SITE_NAME}.dev3.conf
+sudo sed -i "s/branchname/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/${USER}-${PROJECT_TYPE}-${INITIAL_SITE_NAME}.dev3.conf
+sudo /usr/sbin/rcapache2 restart
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Create the database for the site..."
+# -------------------------------------------------------------------------------------------------
+
+# We will create a database for the Drupal site.  Then, we need to allow the user full access to this database as standard 
+# privileges required by Drupal do not seem to allow us the create the initial tables.  We will then change privileges
+# to only those needed for Drupal.
+# NB - It is possible to run the 'drush site-install' command and specify the root user for MySQL - but this would expose the
+# MYSQL root user and password to anyone who can read this script - and this might include user accounts which are not in the 
+# wheel group.
+
+sudo mysqladmin create ${DATABASE_NAME}
+sudo mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Carry out a site install on the new site based on the database just created..."
+# -------------------------------------------------------------------------------------------------
+
+cd ~/projects/${PROJECT_TYPE}/branches/${INITIAL_SITE_NAME}
+drush site-install standard --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME} --yes
+
+# Now we've allowed the user to set up the Drupal site we're going to reduce the user
+# down to only the rights which they need to run Drupal.  We do this by revoking all 
+# rights and then only allowing the required rights.
+
+sudo mysql --execute="REVOKE ALL PRIVILEGES, GRANT OPTION FROM '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
+sudo mysql --execute="GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER, CREATE TEMPORARY TABLES, LOCK TABLES ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
+
+echo "This is the URL for your new website:"
+echo ${USER}-${PROJECT_TYPE}-${INITIAL_SITE_NAME}.dev3
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Change permissions on the files directory to enable the web server to write to it..."
+# -------------------------------------------------------------------------------------------------
+sudo chmod 777 -R ~/projects/${PROJECT_TYPE}/branches/${INITIAL_SITE_NAME}/sites/default/files
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Finished."
+# -------------------------------------------------------------------------------------------------
+
+exit 0

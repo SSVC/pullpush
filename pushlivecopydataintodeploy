@@ -1,0 +1,206 @@
+#!/bin/bash
+
+# pushlivecopydataintodeploy
+# Push livecopy data into deploy
+
+# ---------------------------------------------------------------------------------------------------
+# Script which will export the data from the livecopy site and import that data into the deploy site.
+# ---------------------------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------------------------
+# Logging setup
+# -------------------------------------------------------------------------------------------------
+
+# These lines have been copied from http://stackoverflow.com/questions/3173131/redirect-copy-of-stdout-to-log-file-from-within-bash-script-itself
+# and will send the script output to a log file.
+mkdir -p ~/logs/pullpush
+DATE_TIME=`date +%Y%m%d-%H%M%S`
+logfile=~/logs/pullpush/pushlivecopydataintodeploy_${DATE_TIME}.log
+mkfifo ${logfile}.pipe
+tee < ${logfile}.pipe $logfile &
+exec &> ${logfile}.pipe
+rm ${logfile}.pipe
+
+# -------------------------------------------------------------------------------------------------
+# We are going to bring in a parameter which will be used to pull in a file containing values for
+# variables - this is to prevent users accidentally using someone elses databases and web space.
+# -------------------------------------------------------------------------------------------------
+
+echo
+echo `date`
+echo "Testing for argument..."
+if [ $1 ]
+then
+    echo "Project argument supplied OK as $1"
+    echo
+else
+    echo "ERROR - No argument supplied"
+    exit -1
+fi
+
+# Check the variables file exists.
+if [ -e ~/.pullpush/${1} ]
+then
+        source ~/.pullpush/$1
+else
+        echo "ERROR - Configuration file $1 not found."
+        exit -1
+fi
+
+# Check the global settings file exists.
+if [ -e /home/pullpush/.pullpush/projects/${1} ]
+then
+        source /home/pullpush/.pullpush/projects/${1}
+else
+        echo "ERROR - Global configuration file $1 not found."
+        exit -1
+fi
+
+DATE_TIME=`date +%Y%m%d-%H%M%S`
+
+
+# Pull in any Subtype files which means that the fucntions in those
+# files will be available.
+
+
+for SUBTYPE in $PROJECT_SUBTYPES
+do
+    echo
+    echo "SUBTYPE:"
+    echo "$SUBTYPE"
+
+    source /home/pullpush/project_subtypes/${PROJECT_TYPE}/${SUBTYPE}
+
+
+done
+
+
+for SUBTYPE in $PROJECT_SUBTYPES
+do
+
+    if [ "$SUBTYPE" = "icms" ]
+	then
+
+echo
+echo "we will run the function"
+transfer_icms_data
+
+    fi
+
+
+done
+
+
+
+
+
+
+## exit
+
+
+
+
+
+
+
+
+
+
+### -------------------------------------------------------------------------------------------------
+##echo
+##echo `date`
+##echo "Disable the rules module to prevent rules from being fired off when data is imported..."
+### -------------------------------------------------------------------------------------------------
+##ssh deploy@localhost "drush --yes ${DEPLOY_DRUSH_ALIAS} dis rules*"
+
+
+
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Installing the data export import module into the livecopy website..."
+# -------------------------------------------------------------------------------------------------
+ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} pm-download data_export_import"
+ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} --yes pm-enable data_export_import"
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Installing the data export import module into the deploy website..."
+# -------------------------------------------------------------------------------------------------
+ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} pm-download data_export_import"
+ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} --yes pm-enable data_export_import"
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Copy the users across..."
+# -------------------------------------------------------------------------------------------------
+USER_FILE_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex users")
+
+ssh deploy@localhost "mkdir -p ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users"
+ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${FILENAME}"
+ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Copy the nodes across..."
+# -------------------------------------------------------------------------------------------------
+##ssh livecopy@localhost "drush @livecopy_${PROJECT_NAME} dei-ex nodes --content-types=${NODE_CONTENT_TYPES}" > files.txt
+FILES_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex nodes --content-types=${NODE_CONTENT_TYPES}")
+
+echo "..."
+echo $FILES_PRODUCED
+echo ",,,"
+
+for FILENAME in $FILES_PRODUCED
+do 
+    echo "$FILENAME"
+
+    ssh deploy@localhost "mkdir -p ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes"
+    ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes/${FILENAME} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes/${FILENAME}"
+    ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im nodes --file=${FILENAME}"
+
+done
+
+
+
+##source /home/pullpush/.pullpush/projects/${1}
+
+
+## Sort out the extra requirements.
+
+## Carry out project extras.
+
+for EXTRA in $PROJECT_EXTRAS
+do
+    echo
+    echo "EXTRA"
+    echo "$EXTRA"
+
+
+
+
+done
+
+
+
+
+
+
+
+# -------------------------------------------------------------------------------------------------
+##echo
+##echo `date`
+##echo "Re-enable the Rules module - existing rules should still be in place..."
+# -------------------------------------------------------------------------------------------------
+##ssh deploy@localhost "drush --yes ${DEPLOY_DRUSH_ALIAS} en rules"
+##ssh deploy@localhost "drush --yes ${DEPLOY_DRUSH_ALIAS} en rules_admin"
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Finished."
+# -------------------------------------------------------------------------------------------------
