@@ -32,18 +32,20 @@ echo `date`
 echo "Testing for arguments..."
 if [ $1 ]
 then
-    echo "Project type supplied OK as $1"
     echo
+    echo "Project type supplied OK as $1"
 else
+    echo
     echo "ERROR - No project type supplied"
     exit -1
 fi
 
 if [ $2 ]
 then
-    echo "Initial site name supplied OK as $2"
     echo
+    echo "Initial site name supplied OK as $2"
 else
+    echo
     echo "ERROR - No initial site name supplied"
     exit -1
 fi
@@ -57,7 +59,15 @@ fi
 # valid.
 
 
-source /etc/pullpush.conf
+# Check the Pullpush configuration file exists.
+if [ -e /etc/pullpush/pullpush.conf ]
+then
+    source /etc/pullpush/pullpush.conf
+else
+    echo
+    echo "ERROR - Pullpush configuration file not found."
+    exit -1
+fi
 
 DATE_TIME=`date +%Y%m%d-%H%M%S`
 PROJECT_TYPE=${1}
@@ -81,8 +91,8 @@ DATABASE_PASSWORD=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digi
 # Todo
 # Need to check that the database name or database username has not been used already.
 
-# We do this first to make sure the document root exists - otherwise the 'rcapache2 restart' command
-# will produce a warning.
+# We do this first to make sure the document root exists - otherwise the commands to restart Apache
+# will produce warnings.
 mkdir -p ~/initial_sites
 
 # -------------------------------------------------------------------------------------------------
@@ -207,6 +217,8 @@ case "$PROJECT_TYPE" in
         echo "Carrying out a site install on the Drupal 7 site..."
 
 	cd ~/initial_sites/${INITIAL_SITE_NAME}
+
+        # For D6 the profile should be 'default' and under D7 the profile should be 'standard'.
 	drush site-install standard --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME} --yes
 
         # Now we've allowed the user to set up the Drupal site we're going to reduce the user
@@ -235,7 +247,9 @@ case "$PROJECT_TYPE" in
         echo "Carrying out a site install on the Drupal 7 site..."
 
 	cd ~/initial_sites/${INITIAL_SITE_NAME}
-	drush site-install standard --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME} --yes
+
+        # For D6 the profile should be 'default' and under D7 the profile should be 'standard'.
+	drush site-install default --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME} --yes
 
         # Now we've allowed the user to set up the Drupal site we're going to reduce the user
         # down to only the rights which they need to run Drupal.  We do this by revoking all 
