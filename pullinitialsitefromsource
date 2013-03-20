@@ -36,7 +36,7 @@ then
     echo "Project type supplied OK as $1"
 else
     echo
-    echo "ERROR - No project type supplied"
+    echo "ERROR - No project type supplied."
     exit -1
 fi
 
@@ -46,18 +46,16 @@ then
     echo "Initial site name supplied OK as $2"
 else
     echo
-    echo "ERROR - No initial site name supplied"
+    echo "ERROR - No initial site name supplied."
     exit -1
 fi
 
 # Todo
 # Here we need to check that the project type supplied is valid.
 
-
 # Todo
 # Here we need to check that the intial site name has not been used already and is 
 # valid.
-
 
 # Check the Pullpush configuration file exists.
 if [ -e /etc/pullpush/pullpush.conf ]
@@ -84,7 +82,7 @@ echo "Create database name, user name and password..."
 # has a limit on database usernames of 16 characters.
 # NB - It would be good to put hyphens inbetween the parts of the database name but 
 # this causes problems with MySQL.
-DATABASE_NAME=${USER}${INITIAL_SITE_NAME}
+DATABASE_NAME=${USER}initialsite${INITIAL_SITE_NAME}
 DATABASE_USER=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
 DATABASE_PASSWORD=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
 
@@ -118,7 +116,7 @@ case "${PROJECT_TYPE}" in
     
     *)
         echo "Error - Invalid project type."
-        exit 1
+        exit -1
 esac
 
 # -------------------------------------------------------------------------------------------------
@@ -126,18 +124,18 @@ echo
 echo `date`
 echo "Set up the vhost for the site..."
 # -------------------------------------------------------------------------------------------------
-case "$SERVER_TYPE" in
+case "${SERVER_TYPE}" in
 
     debian)
 	echo
 	echo `date`
         echo "Set up vhost on Debian."
-        sudo cp /usr/share/local/pullpush/vhost-drupal7.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
+        sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
 
-        sudo sed -i "s/username/${USER}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
-        sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
-        sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
-        sudo sed -i "s/serveradminemail/${SERVER_ADMIN_EMAIL}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
+        sudo sed -i "s/username/${USER}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
+        sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
+        sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
+        sudo sed -i "s/serveradminemail/${SERVER_ADMIN_EMAIL}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
 
         sudo a2ensite ${USER}-initial-site-${INITIAL_SITE_NAME}
         sudo apache2ctl restart
@@ -145,7 +143,7 @@ case "$SERVER_TYPE" in
     
     sles)
         echo "Set up a vhost on SLES."
-        sudo cp /etc/apache2/vhosts.d/vhost-drupal7.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
+        sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
 
         sudo sed -i "s/username/${USER}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
         sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
@@ -172,7 +170,8 @@ echo "Create the database for the site..."
 # NB - It is possible to run the 'drush site-install' command and specify the root user for MySQL - but this would expose the
 # MYSQL root user and password to anyone who can read this script - and this might include user accounts which are not in the 
 # wheel group.
-case "$PROJECT_TYPE" in
+case "${PROJECT_TYPE}" in
+
     drupal7)
         echo
 	echo `date`
@@ -210,7 +209,8 @@ echo `date`
 echo "Carry out a site install on the new site based on the database just created..."
 # -------------------------------------------------------------------------------------------------
 
-case "$PROJECT_TYPE" in
+case "${PROJECT_TYPE}" in
+
     drupal7)
 	echo
 	echo `date`
@@ -230,9 +230,9 @@ case "$PROJECT_TYPE" in
 	echo 
 	echo `date`
 	echo "THIS IS THE URL FOR THE NEW SITE: "
-	echo ${USER}-initial-sites-${INITIAL_SITE_NAME}.${SERVER_FQDN}
+	echo ${USER}-initial-site-${INITIAL_SITE_NAME}.${SERVER_FQDN}
 
-	if [ $APACHE_TYPE ne "ITK" ]
+	if [ ${APACHE_TYPE} ne "ITK" ]
 	    then
 	    echo
 	    echo `date`
@@ -244,7 +244,7 @@ case "$PROJECT_TYPE" in
     drupal6)
 	echo
 	echo `date`
-        echo "Carrying out a site install on the Drupal 7 site..."
+        echo "Carrying out a site install on the Drupal 6 site..."
 
 	cd ~/initial_sites/${INITIAL_SITE_NAME}
 
@@ -260,9 +260,9 @@ case "$PROJECT_TYPE" in
 	echo 
 	echo `date`
 	echo "THIS IS THE URL FOR THE NEW SITE: "
-	echo ${USER}-initial-sites-${INITIAL_SITE_NAME}.${SERVER_FQDN}
+	echo ${USER}-initial-site-${INITIAL_SITE_NAME}.${SERVER_FQDN}
 
-	if [ $APACHE_TYPE ne "ITK" ]
+	if [ "${APACHE_TYPE}" != "ITK" ]
 	    then
 	    echo
 	    echo `date`
@@ -273,7 +273,7 @@ case "$PROJECT_TYPE" in
     
     *)
         echo "Error - Invalid project type."
-        exit 1
+        exit -1
 esac
 
 
