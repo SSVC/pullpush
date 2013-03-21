@@ -113,11 +113,20 @@ case "${PROJECT_TYPE}" in
 	echo "Download a Drupal 6 site..."
         drush dl drupal-6 --drupal-project-rename=${INITIAL_SITE_NAME} --destination=/home/${USER}/initial_sites
         ;;
+
+    symfony)
+	echo
+	echo `date`
+	echo "Download a Symfony site..."
+	composer create-project symfony/framework-standard-edition /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/ ${SYMFONY_VERSION}
+        ;;
     
     *)
         echo "Error - Invalid project type."
         exit -1
 esac
+
+exit
 
 # -------------------------------------------------------------------------------------------------
 echo
