@@ -74,7 +74,7 @@ INITIAL_SITE_NAME=${2}
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Create database name, user name and password..."
+echo "Set up some initial variables and create the initial site directory..."
 # -------------------------------------------------------------------------------------------------
 
 # Should possibly use a better tool - but SLES does not have gpw or pwgen available.
@@ -119,14 +119,21 @@ case "${PROJECT_TYPE}" in
 	echo `date`
 	echo "Download a Symfony site..."
 	composer create-project symfony/framework-standard-edition /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/ ${SYMFONY_VERSION}
+	composer --working-dir=/home/${USER}/initial_sites/${INITIAL_SITE_NAME} update
+        ;;
+    
+    phpmysql)
+	echo
+	echo `date`
+	echo "Set up a basic PHP page..."
+#	composer create-project symfony/framework-standard-edition /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/ ${SYMFONY_VERSION}
+#	composer --working-dir=/home/${USER}/initial_sites/${INITIAL_SITE_NAME} update
         ;;
     
     *)
         echo "Error - Invalid project type."
         exit -1
 esac
-
-exit
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -139,6 +146,26 @@ case "${SERVER_TYPE}" in
 	echo
 	echo `date`
         echo "Set up vhost on Debian."
+
+	# First we need to copy the relevant vhost template file.
+	case ${PROJECT_TYPE} in
+	    drupal7)
+		echo "Copy the Drupal 7 vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
+                ;;
+            drupal6)
+		echo "Copy the Drupal 6 vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_drupal6.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
+                ;;
+	    symfony)
+		echo "Copy the Symfony vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_symfony.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
+                ;;
+	    *)
+		echo "Error - Invalid project type."
+		exit -1
+        esac
+
         sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
 
         sudo sed -i "s/username/${USER}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
@@ -156,6 +183,24 @@ case "${SERVER_TYPE}" in
         echo "Set up a vhost on SLES."
         sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
 
+	case ${PROJECT_TYPE} in
+	    drupal7)
+		echo "Copy the Drupal 7 vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
+                ;;
+            drupal6)
+		echo "Copy the Drupal 6 vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_drupal6.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
+                ;;
+	    symfony)
+		echo "Copy the Symfony vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_symfony.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
+                ;;
+	    *)
+		echo "Error - Invalid project type."
+		exit -1
+        esac
+
         sudo sed -i "s/username/${USER}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
         sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
         sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
@@ -166,7 +211,7 @@ case "${SERVER_TYPE}" in
 
     *)
         echo "Error - Invalid server type."
-        exit 1
+        exit -1
 esac
 
 # -------------------------------------------------------------------------------------------------
@@ -207,10 +252,28 @@ case "${PROJECT_TYPE}" in
 	sudo mysqladmin create ${DATABASE_NAME}
 	sudo mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
         ;;
+
+    symfony)
+        echo
+	echo `date`
+	echo "Setting up a database for a Symfony site..."
+
+        # Although Symfony does not need a database we will set one up here for the convienience of the developers.
+	sudo mysqladmin create ${DATABASE_NAME}
+	sudo mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
+	echo 
+	echo `date`
+	echo "This is the database name: "
+	echo ${DATABASE_NAME}
+	echo "This is the database user which should be used to access the database: "
+	echo ${DATABASE_USER}
+	echo "This is the database username password: "
+	echo ${DATABASE_PASSWORD}
+        ;;
     
     *)
         echo "Error - Invalid project type."
-        exit 1
+        exit -1
 esac
 
 # -------------------------------------------------------------------------------------------------
@@ -238,7 +301,7 @@ case "${PROJECT_TYPE}" in
 
 	echo 
 	echo `date`
-	echo "THIS IS THE URL FOR THE NEW SITE: "
+	echo "This is the URL for the new site: "
 	echo ${USER}-initial-site-${INITIAL_SITE_NAME}.${SERVER_FQDN}
 
 	if [ "${APACHE_TYPE}" != "ITK" ]
@@ -268,7 +331,7 @@ case "${PROJECT_TYPE}" in
 
 	echo 
 	echo `date`
-	echo "THIS IS THE URL FOR THE NEW SITE: "
+	echo "This is the URL for the new site: "
 	echo ${USER}-initial-site-${INITIAL_SITE_NAME}.${SERVER_FQDN}
 
 	if [ "${APACHE_TYPE}" != "ITK" ]
@@ -278,6 +341,17 @@ case "${PROJECT_TYPE}" in
 	    echo "Setting permissions for the files/ directory for non-ITK sites so the web server can write to it..."
 	    sudo chmod 777 -R ~/initial_sites/${INITIAL_SITE_NAME}/sites/default/files
 	fi
+        ;;
+    
+    symfony)
+	echo
+	echo `date`
+        echo "Carrying out a site install on the Symfony site - currently no extra configuration needed for Symfony sites..."
+
+	echo 
+	echo `date`
+	echo "This is the URL for the new site: "
+	echo ${USER}-initial-site-${INITIAL_SITE_NAME}.${SERVER_FQDN}
         ;;
     
     *)
