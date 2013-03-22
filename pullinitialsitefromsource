@@ -160,7 +160,7 @@ case "${SERVER_TYPE}" in
 		echo "Copy the Symfony vhost template..."
 		sudo cp /usr/local/share/pullpush/vhost_symfony.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
                 ;;
-	    symfony)
+	    phpmysql)
 		echo "Copy the Symfony vhost template..."
 		sudo cp /usr/local/share/pullpush/vhost_phpmysql.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
                 ;;
@@ -169,8 +169,9 @@ case "${SERVER_TYPE}" in
 		exit -1
         esac
 
-        sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
+##        sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
 
+        # Here we will update the vhost files as necessary.  There may be a more elegant way of doing this. 
         sudo sed -i "s/username/${USER}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
         sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
         sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
