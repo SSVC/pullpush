@@ -1,0 +1,14 @@
+<VirtualHost *:80>
+
+    DocumentRoot /home/username/initial_sites/initialsitename
+    ServerName username-initial-site-initialsitename.serverfqdn
+    ServerAdmin serveradminemail
+
+    <Directory /home/username/initial_sites/initialsitename>
+	Options Indexes FollowSymLinks MultiViews
+	AllowOverride None
+        Order allow,deny
+        Allow from all
+
+    </Directory>
+</VirtualHost>

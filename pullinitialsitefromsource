@@ -126,8 +126,7 @@ case "${PROJECT_TYPE}" in
 	echo
 	echo `date`
 	echo "Set up a basic PHP page..."
-#	composer create-project symfony/framework-standard-edition /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/ ${SYMFONY_VERSION}
-#	composer --working-dir=/home/${USER}/initial_sites/${INITIAL_SITE_NAME} update
+	cp /usr/local/share/pullpush/index.php.template /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/index.php
         ;;
     
     *)
@@ -160,6 +159,10 @@ case "${SERVER_TYPE}" in
 	    symfony)
 		echo "Copy the Symfony vhost template..."
 		sudo cp /usr/local/share/pullpush/vhost_symfony.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
+                ;;
+	    symfony)
+		echo "Copy the Symfony vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_phpmysql.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
                 ;;
 	    *)
 		echo "Error - Invalid project type."
