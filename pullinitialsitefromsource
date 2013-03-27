@@ -200,8 +200,12 @@ case "${SERVER_TYPE}" in
 		sudo cp /usr/local/share/pullpush/vhost_drupal6.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
                 ;;
 	    symfonymysql)
-		echo "Copy the Symfonymysql vhost template..."
+		echo "Copy the symfonymysql vhost template..."
 		sudo cp /usr/local/share/pullpush/vhost_symfonymysql.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
+                ;;
+	    phpmysql)
+		echo "Copy the phpmysql vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_phpmysql.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
                 ;;
 	    *)
 		echo "Error - Invalid project type."

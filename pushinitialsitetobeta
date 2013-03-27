@@ -7,3 +7,103 @@
 # Script which take an initial site from a user and use it to create a new beta site.
 # -----------------------------------------------------------------------------------
 
+# -------------------------------------------------------------------------------------------------
+# Logging setup
+# -------------------------------------------------------------------------------------------------
+
+# These lines have been copied from 
+# http://stackoverflow.com/questions/3173131/redirect-copy-of-stdout-to-log-file-from-within-bash-script-itself
+# and will send the script output to a log file.
+mkdir -p ~/logs/pullpush
+DATE_TIME=`date +%Y%m%d-%H%M%S`
+logfile=~/logs/pullpush/pushinitialsitetobeta_${DATE_TIME}.log
+mkfifo ${logfile}.pipe
+tee < ${logfile}.pipe $logfile &
+exec &> ${logfile}.pipe
+rm ${logfile}.pipe
+
+# -------------------------------------------------------------------------------------------------
+# We are going to bring in a parameter which will be used to pull in a file containing values for
+# variables - this is to prevent users accidentally using someone elses databases and web space.
+# -------------------------------------------------------------------------------------------------
+
+echo
+echo `date`
+echo "Testing for arguments..."
+if [ $1 ]
+then
+    echo
+    echo "Project type supplied OK as $1"
+else
+    echo
+    echo "ERROR - No project type supplied."
+    exit -1
+fi
+
+if [ $2 ]
+then
+    echo
+    echo "Initial site name supplied OK as $2"
+else
+    echo
+    echo "ERROR - No initial site name supplied."
+    exit -1
+fi
+
+if [ $3 ]
+then
+    echo
+    echo "Project name supplied OK as $2"
+else
+    echo
+    echo "ERROR - No project name supplied."
+    exit -1
+fi
+
+# Todo
+# Here we need to check that the supplied parameters are correct.
+
+# Check the Pullpush configuration file exists.
+if [ -e /etc/pullpush/pullpush.conf ]
+then
+    source /etc/pullpush/pullpush.conf
+else
+    echo
+    echo "ERROR - Pullpush configuration file not found."
+    exit -1
+fi
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Setting up some variables..."
+# -------------------------------------------------------------------------------------------------
+DATE_TIME=`date +%Y%m%d-%H%M%S`
+PROJECT_TYPE=${1}
+INITIAL_SITE_NAME=${2}
+PROJECT_NAME=${3}
+
+# Check the initial site exists.
+if [ ! -d "/home/${USER}/initial_sites/${INITIAL_SITE_NAME}" ]; then
+    echo "The initial site does not exist."
+    exit -1
+fi
+
+# Check the beta site does not exist already.
+if [ -d "/home/beta/web/${PROJECT_NAME}" ]; then
+    echo "The beta site already exists."
+    exit -1
+fi
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Make backup copy of the initial site..."
+# -------------------------------------------------------------------------------------------------
+mkdir -p ~/backups/initial_sites
+sudo mysqldump ${USER}initialsite${INITIAL_SITE_NAME} > /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+tar --create --file=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.tar /home/${USER}/initial_sites/${INITIAL_SITE_NAME}
+
+exit 0
+
+
