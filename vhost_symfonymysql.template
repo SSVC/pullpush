@@ -6,9 +6,17 @@
     DocumentRoot /home/username/initial_sites/initialsitename
 
     <Directory /home/username/initial_sites/initialsitename>
-	AllowOverride all
-	Order allow,deny
-	Allow from all
+	Options Indexes FollowSymLinks MultiViews
+	AllowOverride None
+        Order allow,deny
+        Allow from all
+
+        <IfModule mod_rewrite.c>
+            RewriteEngine On
+            RewriteCond %{REQUEST_FILENAME} !-f
+            RewriteRule ^(.*)$ /app.php [QSA,L]
+        </IfModule>
+
     </Directory>
 
     # Possible values include: debug, info, notice, warn, error, crit,

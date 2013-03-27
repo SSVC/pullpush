@@ -114,10 +114,10 @@ case "${PROJECT_TYPE}" in
         drush dl drupal-6 --drupal-project-rename=${INITIAL_SITE_NAME} --destination=/home/${USER}/initial_sites
         ;;
 
-    symfony)
+    symfonymysql)
 	echo
 	echo `date`
-	echo "Download a Symfony site..."
+	echo "Download the Symfony framework..."
 	composer create-project symfony/framework-standard-edition /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/ ${SYMFONY_VERSION}
 	composer --working-dir=/home/${USER}/initial_sites/${INITIAL_SITE_NAME} update
         ;;
@@ -156,9 +156,9 @@ case "${SERVER_TYPE}" in
 		echo "Copy the Drupal 6 vhost template..."
 		sudo cp /usr/local/share/pullpush/vhost_drupal6.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
                 ;;
-	    symfony)
+	    symfonymysql)
 		echo "Copy the Symfony vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_symfony.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
+		sudo cp /usr/local/share/pullpush/vhost_symfonymysql.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
                 ;;
 	    phpmysql)
 		echo "Copy the Symfony vhost template..."
@@ -196,9 +196,9 @@ case "${SERVER_TYPE}" in
 		echo "Copy the Drupal 6 vhost template..."
 		sudo cp /usr/local/share/pullpush/vhost_drupal6.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
                 ;;
-	    symfony)
-		echo "Copy the Symfony vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_symfony.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
+	    symfonymysql)
+		echo "Copy the Symfonymysql vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_symfonymysql.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
                 ;;
 	    *)
 		echo "Error - Invalid project type."
@@ -257,12 +257,30 @@ case "${PROJECT_TYPE}" in
 	sudo mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
         ;;
 
-    symfony)
+    symfonymysql)
         echo
 	echo `date`
-	echo "Setting up a database for a Symfony site..."
+	echo "Setting up a database for a symfonymysql site..."
 
-        # Although Symfony does not need a database we will set one up here for the convienience of the developers.
+        # Although Symfony does not need a database we will set one up for this project type for the convenience of the developers.
+	sudo mysqladmin create ${DATABASE_NAME}
+	sudo mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
+	echo 
+	echo `date`
+	echo "This is the database name: "
+	echo ${DATABASE_NAME}
+	echo "This is the database user which should be used to access the database: "
+	echo ${DATABASE_USER}
+	echo "This is the database username password: "
+	echo ${DATABASE_PASSWORD}
+        ;;
+
+    phpmysql)
+        echo
+	echo `date`
+	echo "Setting up a database for a phpmysql site..."
+
+        # We will set up a database for this project type for the convenience of the developers.
 	sudo mysqladmin create ${DATABASE_NAME}
 	sudo mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
 	echo 
@@ -347,10 +365,21 @@ case "${PROJECT_TYPE}" in
 	fi
         ;;
     
-    symfony)
+    symfonymysql)
 	echo
 	echo `date`
-        echo "Carrying out a site install on the Symfony site - currently no extra configuration needed for Symfony sites..."
+        echo "Carrying out a site install on the symfonymysql site - currently no extra configuration needed for phpmysql sites..."
+
+	echo 
+	echo `date`
+	echo "This is the URL for the new site: "
+	echo ${USER}-initial-site-${INITIAL_SITE_NAME}.${SERVER_FQDN}
+        ;;
+    
+    phpmysql)
+	echo
+	echo `date`
+        echo "Carrying out a site install on the phpmysql site - currently no extra configuration needed for phpmysql sites..."
 
 	echo 
 	echo `date`

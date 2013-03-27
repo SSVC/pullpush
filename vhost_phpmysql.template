@@ -1,8 +1,9 @@
 <VirtualHost *:80>
 
-    DocumentRoot /home/username/initial_sites/initialsitename
     ServerName username-initial-site-initialsitename.serverfqdn
     ServerAdmin serveradminemail
+
+    DocumentRoot /home/username/initial_sites/initialsitename
 
     <Directory /home/username/initial_sites/initialsitename>
 	Options Indexes FollowSymLinks MultiViews
@@ -11,4 +12,18 @@
         Allow from all
 
     </Directory>
+
+    # Possible values include: debug, info, notice, warn, error, crit,
+    # alert, emerg.
+    LogLevel warn
+
+    # Make all scripts run as the specified user if Apache ITK is being used.
+    <IfModule mpm_itk_module>
+        AssignUserId username username
+    </IfModule>
+
+    # Limit PHP scripts to accessing only certain direectories.
+    # NB - This can be worked around with shell_exec etc but is a level of protection.
+    php_admin_value open_basedir /home/username/:/usr/share/php/:/tmp
+
 </VirtualHost>
