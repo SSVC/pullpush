@@ -67,6 +67,8 @@ else
     exit -1
 fi
 
+# Todo - Need to check if the initial site has been created already.
+
 DATE_TIME=`date +%Y%m%d-%H%M%S`
 PROJECT_TYPE=${1}
 INITIAL_SITE_NAME=${2}
@@ -126,6 +128,7 @@ case "${PROJECT_TYPE}" in
 	echo
 	echo `date`
 	echo "Set up a basic PHP page..."
+	mkdir -p /home/${USER}/initial_sites/${INITIAL_SITE_NAME}
 	cp /usr/local/share/pullpush/index.php.template /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/index.php
         ;;
     
@@ -373,7 +376,7 @@ case "${PROJECT_TYPE}" in
 	echo 
 	echo `date`
 	echo "This is the URL for the new site: "
-	echo ${USER}-initial-site-${INITIAL_SITE_NAME}.${SERVER_FQDN}
+	echo ${USER}-initial-site-${INITIAL_SITE_NAME}.${SERVER_FQDN}/web/app_dev.php
         ;;
     
     phpmysql)
