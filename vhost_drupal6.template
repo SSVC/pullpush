@@ -3,9 +3,9 @@
     ServerName username-initial-site-initialsitename.serverfqdn
     ServerAdmin serveradminemail
 
-    DocumentRoot /home/username/initial_sites/initialsitename
+    DocumentRoot documentroot
 
-    <Directory /home/username/initial_sites/initialsitename>
+    <Directory documentroot>
 	AllowOverride all
 	Order allow,deny
 	Allow from all

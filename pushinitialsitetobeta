@@ -83,6 +83,15 @@ PROJECT_TYPE=${1}
 INITIAL_SITE_NAME=${2}
 PROJECT_NAME=${3}
 
+# Should possibly use a better tool - but SLES does not have gpw or pwgen available.
+# NB - We need to generate a shortish username to log in to the database as MySQL
+# has a limit on database usernames of 16 characters.
+# NB - It would be good to put hyphens inbetween the parts of the database name but 
+# this causes problems with MySQL.
+DATABASE_NAME=beta${PROJECT_NAME}
+DATABASE_USER=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
+DATABASE_PASSWORD=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
+
 # Check the initial site exists.
 if [ ! -d "/home/${USER}/initial_sites/${INITIAL_SITE_NAME}" ]; then
     echo "The initial site does not exist."
@@ -103,6 +112,323 @@ echo "Make backup copy of the initial site..."
 mkdir -p ~/backups/initial_sites
 sudo mysqldump ${USER}initialsite${INITIAL_SITE_NAME} > /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
 tar --create --file=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.tar /home/${USER}/initial_sites/${INITIAL_SITE_NAME}
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "For Drupal 7 and Drupal 6 sites we will create archives which can be reloaded into the beta site..."
+# -------------------------------------------------------------------------------------------------
+
+## HERE EREHR 
+
+case "${PROJECT_TYPE}" in
+
+    drupal7)
+        echo
+	echo `date`
+	echo "Create an archive of a Drupal 7 site..."
+
+	drush --root=/home/${USER}/initial_sites/${INITIAL_SITE_NAME} archive-dump --destination=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_archive_${DATE_TIME}.tar
+        ;;
+
+    drupal6)
+        echo
+	echo `date`
+	echo "Create an archive of a Drupal 6 site..."
+
+	drush --root=/home/${USER}/initial_sites/${INITIAL_SITE_NAME} archive-dump --destination=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_archive_${DATE_TIME}.tar
+        ;;
+
+    symfonymysql)
+        echo
+	echo `date`
+	echo "..."
+
+        ;;
+   
+    phpmysql)
+        echo
+	echo `date`
+	echo "..."
+
+        ;;
+   
+   
+    *)
+        echo "Error - Invalid project type."
+        exit -1
+
+esac
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Here we will create the Subversion repository for this project..."
+# -------------------------------------------------------------------------------------------------
+sudo svnadmin create /var/lib/svn/${PROJECT_NAME}
+
+# We will set the ownership to www-data as we will primarily be using HTTP to access the archive.
+sudo chown -R www-data:www-data /var/lib/svn/${PROJECT_NAME}
+
+# Now we import the initial files.
+#svn import /home/${USER}/initial_sites/${INITIAL_SITE_NAME} http://localhost/svn/${PROJECT_NAME} -m "Initial import."
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Set up the beta vhost..."
+# -------------------------------------------------------------------------------------------------
+case "${SERVER_TYPE}" in
+
+    debian)
+	echo
+	echo `date`
+        echo "Set up vhost on Debian."
+
+	# First we need to copy the relevant vhost template file.
+	case ${PROJECT_TYPE} in
+	    drupal7)
+		echo "Copy the Drupal 7 vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/sites-available/beta-${PROJECT_NAME}
+                ;;
+            drupal6)
+		echo "Copy the Drupal 6 vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_drupal6.template /etc/apache2/sites-available/beta-${PROJECT_NAME}
+                ;;
+	    symfonymysql)
+		echo "Copy the Symfony vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_symfonymysql.template /etc/apache2/sites-available/beta-${PROJECT_NAME}
+                ;;
+	    phpmysql)
+		echo "Copy the Symfony vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_phpmysql.template /etc/apache2/sites-available/beta-${PROJECT_NAME}
+                ;;
+	    *)
+		echo "Error - Invalid project type."
+		exit -1
+        esac
+
+##        sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
+
+        # Here we will update the vhost files as necessary.  There may be a more elegant way of doing this. 
+        sudo sed -i "s/documentroot/\/home\/beta\/web\/${PROJECT_NAME}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
+
+        sudo sed -i "s/username/${USER}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
+        sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
+        sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
+        sudo sed -i "s/serveradminemail/${SERVER_ADMIN_EMAIL}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
+
+        sudo a2ensite beta-${PROJECT_NAME}
+        sudo apache2ctl restart
+        ;;
+    
+    sles)
+	echo
+	echo `date`
+        echo "Set up a vhost on SLES."
+        ## sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
+
+	case ${PROJECT_TYPE} in
+	    drupal7)
+		echo "Copy the Drupal 7 vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
+                ;;
+            drupal6)
+		echo "Copy the Drupal 6 vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_drupal6.template /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
+                ;;
+	    symfonymysql)
+		echo "Copy the symfonymysql vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_symfonymysql.template /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
+                ;;
+	    phpmysql)
+		echo "Copy the phpmysql vhost template..."
+		sudo cp /usr/local/share/pullpush/vhost_phpmysql.template /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
+                ;;
+	    *)
+		echo "Error - Invalid project type."
+		exit -1
+        esac
+
+        sudo sed -i "s/documentroot/\/home\/beta\/web\/${PROJECT_NAME}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}.conf
+
+        sudo sed -i "s/username/${USER}/g" /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
+        sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
+        sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
+        sudo sed -i "s/serveradminemail/${SERVER_ADMIN_EMAIL}/g" /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
+
+        sudo /usr/sbin/rcapache2 restart
+        ;;
+
+    *)
+        echo "Error - Invalid server type."
+        exit -1
+esac
+
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Check out the files from SVN..."
+# -------------------------------------------------------------------------------------------------
+##svn checkout http://localhost/svn/${PROJECT_NAME} /home/beta/web/${PROJECT_NAME}
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Create the database for the beta site..."
+# -------------------------------------------------------------------------------------------------
+# We will create a database for the Drupal site.  Then, we need to allow the user full access to this database as standard 
+# privileges required by Drupal do not seem to allow us the create the initial tables.  We will then change privileges
+# to only those needed for Drupal.
+case "${PROJECT_TYPE}" in
+
+    drupal7)
+        echo
+	echo `date`
+	echo "This will set up a database for a Drupal 7 site."
+
+        # NB - It is possible to run the 'drush site-install' command and specify the root user for MySQL - but this would expose the
+        # MYSQL root user and password to anyone who can read this script - and this might include user accounts which are not in the 
+        # wheel group.
+	sudo mysqladmin create ${DATABASE_NAME}
+	sudo mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
+
+	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+        ;;
+
+    drupal6)
+        echo
+	echo `date`
+	echo "Setting up a database for a Drupal 6 site..."
+
+        # NB - It is possible to run the 'drush site-install' command and specify the root user for MySQL - but this would expose the
+        # MYSQL root user and password to anyone who can read this script - and this might include user accounts which are not in the 
+        # wheel group.
+
+	sudo mysqladmin create ${DATABASE_NAME}
+	sudo mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
+
+	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+        ;;
+
+    symfonymysql)
+        echo
+	echo `date`
+	echo "Setting up a database for a symfonymysql site..."
+
+        # Although Symfony does not need a database we will set one up for this project type for the convenience of the developers.
+	sudo mysqladmin create ${DATABASE_NAME}
+	sudo mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
+	echo 
+	echo `date`
+	echo "This is the database name: "
+	echo ${DATABASE_NAME}
+	echo "This is the database user which should be used to access the database: "
+	echo ${DATABASE_USER}
+	echo "This is the database username password: "
+	echo ${DATABASE_PASSWORD}
+
+	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+
+	echo "VERY IMPORTANT - Any settings files should be edited to use the beta database settings."
+        ;;
+
+    phpmysql)
+        echo
+	echo `date`
+	echo "Setting up a database for a phpmysql site..."
+
+        # We will set up a database for this project type for the convenience of the developers.
+	sudo mysqladmin create ${DATABASE_NAME}
+	sudo mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
+	echo 
+	echo `date`
+	echo "This is the database name: "
+	echo ${DATABASE_NAME}
+	echo "This is the database user which should be used to access the database: "
+	echo ${DATABASE_USER}
+	echo "This is the database username password: "
+	echo ${DATABASE_PASSWORD}
+
+	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+
+	echo "VERY IMPORTANT - Any settings files should be edited to use the beta database settings."
+        ;;
+    
+    *)
+        echo "Error - Invalid project type."
+        exit -1
+esac
+
+
+
+
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Here we will build the beta site from the archives created earlier..."
+# -------------------------------------------------------------------------------------------------
+
+sudo mkdir -p /home/beta/web
+sudo chown beta:beta /home/beta/web
+
+case "${PROJECT_TYPE}" in
+
+    drupal7)
+        echo
+	echo `date`
+	echo "Build the beta site from the Drupal 7 site archive..."
+	sudo drush archive-restore /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_archive_${DATE_TIME}.tar --destination=/home/beta/web/${PROJECT_NAME} --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD@localhost/${DATABASE_NAME}
+	sudo chown beta:beta /home/beta/web/${PROJECT_NAME}
+        ;;
+
+    drupal6)
+        echo
+	echo `date`
+	echo "Build the beta site from the Drupal 7 site archive..."
+	sudo drush archive-restore /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_archive_${DATE_TIME}.tar --destination=/home/beta/web/${PROJECT_NAME} --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD@localhost/${DATABASE_NAME}
+	sudo chown beta:beta /home/beta/web/${PROJECT_NAME}
+        ;;
+
+    symfonymysql)
+        echo
+	echo `date`
+	echo "Build the beta site from the symfonymysql site archive..."
+	sudo tar -x --file=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.tar --directory=/home/beta/web/${PROJECT_NAME} --strip-components=3
+	chown -R beta:beta /home/beta/web/${PROJECT_NAME}
+	mysql beta${PROJECT_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+
+	echo "VERY IMPORTANT - THE SETTINGS FILE(S) FOR YOUR PROJECT NEED TO BE EDITED TO POINT AT THE BETA DATABASE - Database: ${DATABASE_NAME), User: ${DATABASE_USER}, Password: ${DATABASE_PASSWORD}"
+        ;;
+   
+    phpmysql)
+        echo
+	echo `date`
+	echo "Build the beta site from the phpmysql site archive..."
+	sudo tar -x --file=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.tar --directory=/home/beta/web/${PROJECT_NAME} --strip-components=3
+	chown -R beta:beta /home/beta/web/${PROJECT_NAME}
+	mysql beta${PROJECT_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+
+	echo "VERY IMPORTANT - THE SETTINGS FILE(S) FOR YOUR PROJECT NEED TO BE EDITED TO POINT AT THE BETA DATABASE - Database: ${DATABASE_NAME), User: ${DATABASE_USER}, Password: ${DATABASE_PASSWORD}"
+        ;;
+   
+    *)
+        echo "Error - Invalid project type."
+        exit -1
+esac
+
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Here we will put the files into the repository..."
+# -------------------------------------------------------------------------------------------------
+svn import /home/beta/web/${PROJECT_NAME} http://localhost/svn/${PROJECT_NAME} -m "Initial import."
+
+
+
 
 exit 0
 

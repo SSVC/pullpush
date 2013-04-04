@@ -175,6 +175,9 @@ case "${SERVER_TYPE}" in
 ##        sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
 
         # Here we will update the vhost files as necessary.  There may be a more elegant way of doing this. 
+
+        sudo sed -i "s/documentroot/\/home\/${USER}\/initial_sites\/${INITIAL_SITE_NAME}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
+
         sudo sed -i "s/username/${USER}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
         sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
         sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
@@ -188,29 +191,31 @@ case "${SERVER_TYPE}" in
 	echo
 	echo `date`
         echo "Set up a vhost on SLES."
-        sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
+        ##sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
 
 	case ${PROJECT_TYPE} in
 	    drupal7)
 		echo "Copy the Drupal 7 vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
+		sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
                 ;;
             drupal6)
 		echo "Copy the Drupal 6 vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_drupal6.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
+		sudo cp /usr/local/share/pullpush/vhost_drupal6.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
                 ;;
 	    symfonymysql)
 		echo "Copy the symfonymysql vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_symfonymysql.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
+		sudo cp /usr/local/share/pullpush/vhost_symfonymysql.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
                 ;;
 	    phpmysql)
 		echo "Copy the phpmysql vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_phpmysql.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}
+		sudo cp /usr/local/share/pullpush/vhost_phpmysql.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
                 ;;
 	    *)
 		echo "Error - Invalid project type."
 		exit -1
         esac
+
+        sudo sed -i "s/documentroot/\/home\/${USER}\/initial_sites\/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
 
         sudo sed -i "s/username/${USER}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
         sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
