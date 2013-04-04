@@ -179,7 +179,7 @@ case "${SERVER_TYPE}" in
         sudo sed -i "s/documentroot/\/home\/${USER}\/initial_sites\/${INITIAL_SITE_NAME}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
 
         sudo sed -i "s/username/${USER}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
-        sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
+        sudo sed -i "s/vhostname/${USER}-initial-site-${INITIAL_SITE_NAME}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
         sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
         sudo sed -i "s/serveradminemail/${SERVER_ADMIN_EMAIL}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
 
@@ -218,7 +218,9 @@ case "${SERVER_TYPE}" in
         sudo sed -i "s/documentroot/\/home\/${USER}\/initial_sites\/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
 
         sudo sed -i "s/username/${USER}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
-        sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
+##        sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
+        sudo sed -i "s/vhostname/${USER}-initial-site-${INITIAL_SITE_NAME}/g" /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
+
         sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
         sudo sed -i "s/serveradminemail/${SERVER_ADMIN_EMAIL}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
 

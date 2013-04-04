@@ -83,7 +83,7 @@ PROJECT_TYPE=${1}
 INITIAL_SITE_NAME=${2}
 PROJECT_NAME=${3}
 
-# Should possibly use a better tool - but SLES does not have gpw or pwgen available.
+# Should possibly use a better tool to generate usernames and passwords - but SLES does not have gpw or pwgen available.
 # NB - We need to generate a shortish username to log in to the database as MySQL
 # has a limit on database usernames of 16 characters.
 # NB - It would be good to put hyphens inbetween the parts of the database name but 
@@ -119,8 +119,6 @@ echo `date`
 echo "For Drupal 7 and Drupal 6 sites we will create archives which can be reloaded into the beta site..."
 # -------------------------------------------------------------------------------------------------
 
-## HERE EREHR 
-
 case "${PROJECT_TYPE}" in
 
     drupal7)
@@ -142,14 +140,14 @@ case "${PROJECT_TYPE}" in
     symfonymysql)
         echo
 	echo `date`
-	echo "..."
+	echo "For symfonymysql the backup files will be used as archive files..."
 
         ;;
    
     phpmysql)
         echo
 	echo `date`
-	echo "..."
+	echo "For phpmysql the backup files will be used as archive files..."
 
         ;;
    
@@ -169,9 +167,6 @@ sudo svnadmin create /var/lib/svn/${PROJECT_NAME}
 
 # We will set the ownership to www-data as we will primarily be using HTTP to access the archive.
 sudo chown -R www-data:www-data /var/lib/svn/${PROJECT_NAME}
-
-# Now we import the initial files.
-#svn import /home/${USER}/initial_sites/${INITIAL_SITE_NAME} http://localhost/svn/${PROJECT_NAME} -m "Initial import."
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -214,7 +209,7 @@ case "${SERVER_TYPE}" in
         sudo sed -i "s/documentroot/\/home\/beta\/web\/${PROJECT_NAME}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
 
         sudo sed -i "s/username/${USER}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
-        sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
+        sudo sed -i "s/vhostname/beta-${PROJECT_NAME}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
         sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
         sudo sed -i "s/serveradminemail/${SERVER_ADMIN_EMAIL}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
 
@@ -253,7 +248,9 @@ case "${SERVER_TYPE}" in
         sudo sed -i "s/documentroot/\/home\/beta\/web\/${PROJECT_NAME}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}.conf
 
         sudo sed -i "s/username/${USER}/g" /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
-        sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
+##        sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
+        sudo sed -i "s/vhostname/beta-${PROJECT_NAME}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}.conf
+
         sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
         sudo sed -i "s/serveradminemail/${SERVER_ADMIN_EMAIL}/g" /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
 
@@ -294,7 +291,7 @@ case "${PROJECT_TYPE}" in
 	sudo mysqladmin create ${DATABASE_NAME}
 	sudo mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
 
-	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+##	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
         ;;
 
     drupal6)
@@ -309,7 +306,7 @@ case "${PROJECT_TYPE}" in
 	sudo mysqladmin create ${DATABASE_NAME}
 	sudo mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
 
-	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+##	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
         ;;
 
     symfonymysql)
@@ -329,7 +326,7 @@ case "${PROJECT_TYPE}" in
 	echo "This is the database username password: "
 	echo ${DATABASE_PASSWORD}
 
-	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+##	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
 
 	echo "VERY IMPORTANT - Any settings files should be edited to use the beta database settings."
         ;;
@@ -351,7 +348,7 @@ case "${PROJECT_TYPE}" in
 	echo "This is the database username password: "
 	echo ${DATABASE_PASSWORD}
 
-	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+##	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
 
 	echo "VERY IMPORTANT - Any settings files should be edited to use the beta database settings."
         ;;
@@ -398,18 +395,18 @@ case "${PROJECT_TYPE}" in
 	echo "Build the beta site from the symfonymysql site archive..."
 	sudo tar -x --file=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.tar --directory=/home/beta/web/${PROJECT_NAME} --strip-components=3
 	chown -R beta:beta /home/beta/web/${PROJECT_NAME}
-	mysql beta${PROJECT_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+	mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
 
 	echo "VERY IMPORTANT - THE SETTINGS FILE(S) FOR YOUR PROJECT NEED TO BE EDITED TO POINT AT THE BETA DATABASE - Database: ${DATABASE_NAME), User: ${DATABASE_USER}, Password: ${DATABASE_PASSWORD}"
         ;;
-   
+
     phpmysql)
         echo
 	echo `date`
 	echo "Build the beta site from the phpmysql site archive..."
 	sudo tar -x --file=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.tar --directory=/home/beta/web/${PROJECT_NAME} --strip-components=3
 	chown -R beta:beta /home/beta/web/${PROJECT_NAME}
-	mysql beta${PROJECT_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+	mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
 
 	echo "VERY IMPORTANT - THE SETTINGS FILE(S) FOR YOUR PROJECT NEED TO BE EDITED TO POINT AT THE BETA DATABASE - Database: ${DATABASE_NAME), User: ${DATABASE_USER}, Password: ${DATABASE_PASSWORD}"
         ;;
@@ -425,9 +422,21 @@ echo
 echo `date`
 echo "Here we will put the files into the repository..."
 # -------------------------------------------------------------------------------------------------
-svn import /home/beta/web/${PROJECT_NAME} http://localhost/svn/${PROJECT_NAME} -m "Initial import."
+sudo -u beta svn import /home/beta/web/${PROJECT_NAME} http://localhost/svn/${PROJECT_NAME} -m "Initial import."
+
+# Here we are telling SVN to ignore the settings file.
+sudo -u beta svn delete --keep-local /home/beta/web/${PROJECT_NAME}/sites/default/settings.php
+sudo -u beta svn propset svn:ignore settings.php /home/beta/web/${PROJECT_NAME}/sites/default
 
 
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Here we need to set up the configuration file at /etc/pullpush/projects/<project_name>..."
+# -------------------------------------------------------------------------------------------------
+
+sudo mkdir -p /etc/pullpush/projects
+echo "PROJECT_TYPE=drupal7\n" >> /etc/pullpush/projects/${PROJECT_NAME}
 
 
 exit 0
