@@ -158,6 +158,9 @@ case "${PROJECT_TYPE}" in
 
 esac
 
+
+: <<'QWERTY'
+
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
@@ -167,6 +170,11 @@ sudo svnadmin create /var/lib/svn/${PROJECT_NAME}
 
 # We will set the ownership to www-data as we will primarily be using HTTP to access the archive.
 sudo chown -R www-data:www-data /var/lib/svn/${PROJECT_NAME}
+
+QWERTY
+
+
+: <<'QWERTY'
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -208,7 +216,7 @@ case "${SERVER_TYPE}" in
         # Here we will update the vhost files as necessary.  There may be a more elegant way of doing this. 
         sudo sed -i "s/documentroot/\/home\/beta\/web\/${PROJECT_NAME}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
 
-        sudo sed -i "s/username/${USER}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
+        sudo sed -i "s/username/beta/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
         sudo sed -i "s/vhostname/beta-${PROJECT_NAME}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
         sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
         sudo sed -i "s/serveradminemail/${SERVER_ADMIN_EMAIL}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}
@@ -247,7 +255,7 @@ case "${SERVER_TYPE}" in
 
         sudo sed -i "s/documentroot/\/home\/beta\/web\/${PROJECT_NAME}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}.conf
 
-        sudo sed -i "s/username/${USER}/g" /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
+        sudo sed -i "s/username/beta/g" /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
 ##        sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/beta-${PROJECT_NAME}.conf
         sudo sed -i "s/vhostname/beta-${PROJECT_NAME}/g" /etc/apache2/sites-available/beta-${PROJECT_NAME}.conf
 
@@ -262,13 +270,9 @@ case "${SERVER_TYPE}" in
         exit -1
 esac
 
+QWERTY
 
-# -------------------------------------------------------------------------------------------------
-echo
-echo `date`
-echo "Check out the files from SVN..."
-# -------------------------------------------------------------------------------------------------
-##svn checkout http://localhost/svn/${PROJECT_NAME} /home/beta/web/${PROJECT_NAME}
+
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -359,9 +363,6 @@ case "${PROJECT_TYPE}" in
 esac
 
 
-
-
-
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
@@ -376,46 +377,47 @@ case "${PROJECT_TYPE}" in
     drupal7)
         echo
 	echo `date`
-	echo "Build the beta site from the Drupal 7 site archive..."
-	sudo drush archive-restore /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_archive_${DATE_TIME}.tar --destination=/home/beta/web/${PROJECT_NAME} --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD@localhost/${DATABASE_NAME}
-	sudo chown beta:beta /home/beta/web/${PROJECT_NAME}
+##	echo "Build the beta site from the Drupal 7 site archive..."
+	sudo drush archive-restore /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_archive_${DATE_TIME}.tar --destination=/home/beta/web/${PROJECT_NAME} --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}
+	sudo chown -R beta:beta /home/beta/web/${PROJECT_NAME}
         ;;
 
     drupal6)
         echo
 	echo `date`
-	echo "Build the beta site from the Drupal 7 site archive..."
-	sudo drush archive-restore /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_archive_${DATE_TIME}.tar --destination=/home/beta/web/${PROJECT_NAME} --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD@localhost/${DATABASE_NAME}
-	sudo chown beta:beta /home/beta/web/${PROJECT_NAME}
+##	echo "Build the beta site from the Drupal 7 site archive..."
+	sudo drush archive-restore /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_archive_${DATE_TIME}.tar --destination=/home/beta/web/${PROJECT_NAME} --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}
+	sudo chown -R beta:beta /home/beta/web/${PROJECT_NAME}
         ;;
 
     symfonymysql)
         echo
 	echo `date`
-	echo "Build the beta site from the symfonymysql site archive..."
+##	echo "Build the beta site from the symfonymysql site archive..."
 	sudo tar -x --file=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.tar --directory=/home/beta/web/${PROJECT_NAME} --strip-components=3
-	chown -R beta:beta /home/beta/web/${PROJECT_NAME}
-	mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+	sudo chown -R beta:beta /home/beta/web/${PROJECT_NAME}
+	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
 
-	echo "VERY IMPORTANT - THE SETTINGS FILE(S) FOR YOUR PROJECT NEED TO BE EDITED TO POINT AT THE BETA DATABASE - Database: ${DATABASE_NAME), User: ${DATABASE_USER}, Password: ${DATABASE_PASSWORD}"
+
         ;;
 
     phpmysql)
         echo
 	echo `date`
-	echo "Build the beta site from the phpmysql site archive..."
+##	echo "Build the beta site from the phpmysql site archive..."
 	sudo tar -x --file=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.tar --directory=/home/beta/web/${PROJECT_NAME} --strip-components=3
-	chown -R beta:beta /home/beta/web/${PROJECT_NAME}
-	mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+	sudo chown -R beta:beta /home/beta/web/${PROJECT_NAME}
+	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
 
-	echo "VERY IMPORTANT - THE SETTINGS FILE(S) FOR YOUR PROJECT NEED TO BE EDITED TO POINT AT THE BETA DATABASE - Database: ${DATABASE_NAME), User: ${DATABASE_USER}, Password: ${DATABASE_PASSWORD}"
+
         ;;
    
     *)
-        echo "Error - Invalid project type."
+##        echo "Error - Invalid project type."
         exit -1
 esac
 
+exit
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -427,16 +429,17 @@ sudo -u beta svn import /home/beta/web/${PROJECT_NAME} http://localhost/svn/${PR
 # Here we are telling SVN to ignore the settings file.
 sudo -u beta svn delete --keep-local /home/beta/web/${PROJECT_NAME}/sites/default/settings.php
 sudo -u beta svn propset svn:ignore settings.php /home/beta/web/${PROJECT_NAME}/sites/default
-
+sudo -u beta svn update
+sudo -u beta svn commit -m "Remove the settings.php file from SVN control to prevent incorrect database connections."
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Here we need to set up the configuration file at /etc/pullpush/projects/<project_name>..."
+##echo "Here we need to set up the configuration file at /etc/pullpush/projects/<project_name>..."
 # -------------------------------------------------------------------------------------------------
 
-sudo mkdir -p /etc/pullpush/projects
-echo "PROJECT_TYPE=drupal7\n" >> /etc/pullpush/projects/${PROJECT_NAME}
+##sudo mkdir -p /etc/pullpush/projects
+##echo PROJECT_TYPE=drupal7\n >> '/etc/pullpush/projects/${PROJECT_NAME}'
 
 
 exit 0
