@@ -143,15 +143,15 @@ case "${PROJECT_TYPE}" in
 	echo "For symfonymysql the backup files will be used as archive files..."
 
         ;;
-   
+    
     phpmysql)
         echo
 	echo `date`
 	echo "For phpmysql the backup files will be used as archive files..."
 
         ;;
-   
-   
+    
+    
     *)
         echo "Error - Invalid project type."
         exit -1
@@ -377,7 +377,14 @@ case "${PROJECT_TYPE}" in
     drupal7)
         echo
 	echo `date`
-##	echo "Build the beta site from the Drupal 7 site archive..."
+	echo "Build the beta site from the Drupal 7 site archive..."
+	# NB - We are going to delete all the files and pull them out from the repository again.  The advantage of using the
+	# archive-restore method is that the settings.php file gets created correctly with the relevant database settings.
+	# I.e. the settings file will contain any tweaks and settings which are in the initial site file but with just the basic 
+	# database settings changed.
+	# So, to say again, we could just put the initial site files into SVN, pull them out from SVN to the beta site and then
+	# try to edit the settings.php file.  Using the archive-backup/archive-restore method means we get a good copy of the 
+	# initial site to the beta site.  We just then have to get the files into SVN and checked back out again to the beta site.
 	sudo drush archive-restore /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_archive_${DATE_TIME}.tar --destination=/home/beta/web/${PROJECT_NAME} --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}
 	sudo chown -R beta:beta /home/beta/web/${PROJECT_NAME}
         ;;
@@ -385,7 +392,14 @@ case "${PROJECT_TYPE}" in
     drupal6)
         echo
 	echo `date`
-##	echo "Build the beta site from the Drupal 7 site archive..."
+	echo "Build the beta site from the Drupal 7 site archive..."
+	# NB - We are going to delete all the files and pull them out from the repository again.  The advantage of using the
+	# archive-restore method is that the settings.php file gets created correctly with the relevant database settings.
+	# I.e. the settings file will contain any tweaks and settings which are in the initial site file but with just the basic 
+	# database settings changed.
+	# So, to say again, we could just put the initial site files into SVN, pull them out from SVN to the beta site and then
+	# try to edit the settings.php file.  Using the archive-backup/archive-restore method means we get a good copy of the 
+	# initial site to the beta site.  We just then have to get the files into SVN and checked back out again to the beta site.
 	sudo drush archive-restore /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_archive_${DATE_TIME}.tar --destination=/home/beta/web/${PROJECT_NAME} --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}
 	sudo chown -R beta:beta /home/beta/web/${PROJECT_NAME}
         ;;
@@ -393,7 +407,7 @@ case "${PROJECT_TYPE}" in
     symfonymysql)
         echo
 	echo `date`
-##	echo "Build the beta site from the symfonymysql site archive..."
+	echo "Build the beta site from the symfonymysql site archive..."
 	sudo tar -x --file=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.tar --directory=/home/beta/web/${PROJECT_NAME} --strip-components=3
 	sudo chown -R beta:beta /home/beta/web/${PROJECT_NAME}
 	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
@@ -404,33 +418,133 @@ case "${PROJECT_TYPE}" in
     phpmysql)
         echo
 	echo `date`
-##	echo "Build the beta site from the phpmysql site archive..."
+	echo "Build the beta site from the phpmysql site archive..."
 	sudo tar -x --file=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.tar --directory=/home/beta/web/${PROJECT_NAME} --strip-components=3
 	sudo chown -R beta:beta /home/beta/web/${PROJECT_NAME}
 	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
 
 
         ;;
-   
+    
     *)
-##        echo "Error - Invalid project type."
+        echo "Error - Invalid project type."
         exit -1
 esac
 
-exit
+
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Here we will put the files into the repository..."
+echo "Here we will put the files into the repository from the initial copy..."
 # -------------------------------------------------------------------------------------------------
-sudo -u beta svn import /home/beta/web/${PROJECT_NAME} http://localhost/svn/${PROJECT_NAME} -m "Initial import."
+##sudo -u beta svn import /home/beta/web/${PROJECT_NAME} http://localhost/svn/${PROJECT_NAME} -m "Initial import."
+##svn import /home/beta/web/${PROJECT_NAME} http://localhost/svn/${PROJECT_NAME} -m "Initial import."
 
-# Here we are telling SVN to ignore the settings file.
-sudo -u beta svn delete --keep-local /home/beta/web/${PROJECT_NAME}/sites/default/settings.php
-sudo -u beta svn propset svn:ignore settings.php /home/beta/web/${PROJECT_NAME}/sites/default
-sudo -u beta svn update
-sudo -u beta svn commit -m "Remove the settings.php file from SVN control to prevent incorrect database connections."
+svn import /home/${USER}/initial_sites/${INITIAL_SITE_NAME} http://localhost/svn/${PROJECT_NAME} -m "Initial import."
+
+##HERE HERE HERE HERE
+
+
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Now we will remove the original files and replace them with the files from the repository to set up SVN properly for the files..."
+# -------------------------------------------------------------------------------------------------
+
+
+case "${PROJECT_TYPE}" in
+
+    drupal7)
+
+# Make a safe copy of the settings file.
+	sudo -u beta cp /home/beta/web/${PROJECT_NAME}/sites/default/settings.php /home/beta/settings.php.${PROJECT_NAME}
+
+# Remove the files which were created from the archive.
+	sudo -u beta chmod -R 777 /home/beta/web/${PROJECT_NAME}/sites/default
+	sudo -u beta rm -rf /home/beta/web/${PROJECT_NAME}/*
+# This is used to remove the hidden (dot) files.
+	sudo -u beta rm -rf /home/beta/web/${PROJECT_NAME}/.??*
+	sudo -u beta rmdir /home/beta/web/${PROJECT_NAME}
+
+# Pull the files from the repository.
+	sudo -u beta svn checkout http://localhost/svn/${PROJECT_NAME} /home/beta/web/${PROJECT_NAME}
+
+# Set the repository to ignore the settings file.
+	sudo -u beta svn delete /home/beta/web/${PROJECT_NAME}/sites/default/settings.php
+	sudo -u beta svn propset svn:ignore settings.php /home/beta/web/${PROJECT_NAME}/sites/default
+####sudo -u beta svn update /home/beta/web/${PROJECT_NAME}
+	sudo -u beta svn commit -m "Remove the settings.php file from SVN control to prevent incorrect database connections." /home/beta/web/${PROJECT_NAME}
+##sudo -u beta svn update /home/beta/web/${PROJECT_NAME}
+
+# Copy back in the settings file.
+	sudo -u beta cp /home/beta/settings.php.${PROJECT_NAME} /home/beta/web/${PROJECT_NAME}/sites/default/settings.php
+
+	;;
+
+    drupal6)
+
+# Make a safe copy of the settings file.
+	sudo -u beta cp /home/beta/web/${PROJECT_NAME}/sites/default/settings.php /home/beta/settings.php.${PROJECT_NAME}
+
+# Remove the files which were created from the archive.
+	sudo -u beta chmod -R 777 /home/beta/web/${PROJECT_NAME}/sites/default
+	sudo -u beta rm -rf /home/beta/web/${PROJECT_NAME}/*
+# This is used to remove the hidden (dot) files.
+	sudo -u beta rm -rf /home/beta/web/${PROJECT_NAME}/.??*
+	sudo -u beta rmdir /home/beta/web/${PROJECT_NAME}
+
+# Pull the files from the repository.
+	sudo -u beta svn checkout http://localhost/svn/${PROJECT_NAME} /home/beta/web/${PROJECT_NAME}
+
+# Set the repository to ignore the settings file.
+	sudo -u beta svn delete /home/beta/web/${PROJECT_NAME}/sites/default/settings.php
+	sudo -u beta svn propset svn:ignore settings.php /home/beta/web/${PROJECT_NAME}/sites/default
+####sudo -u beta svn update /home/beta/web/${PROJECT_NAME}
+	sudo -u beta svn commit -m "Remove the settings.php file from SVN control to prevent incorrect database connections." /home/beta/web/${PROJECT_NAME}
+##sudo -u beta svn update /home/beta/web/${PROJECT_NAME}
+
+# Copy back in the settings file.
+	sudo -u beta cp /home/beta/settings.php.${PROJECT_NAME} /home/beta/web/${PROJECT_NAME}/sites/default/settings.php
+
+	;;
+
+    symfonymysql)
+
+# Remove the files which were created from the archive.
+	sudo -u beta rm -rf /home/beta/web/${PROJECT_NAME}/*
+# This is used to remove the hidden (dot) files.
+	sudo -u beta rm -rf /home/beta/web/${PROJECT_NAME}/.??*
+	sudo -u beta rmdir /home/beta/web/${PROJECT_NAME}
+
+# Pull the files from the repository.
+	sudo -u beta svn checkout http://localhost/svn/${PROJECT_NAME} /home/beta/web/${PROJECT_NAME}
+
+	;;
+
+    phpmysql)
+
+# Remove the files which were created from the archive.
+	sudo -u beta rm -rf /home/beta/web/${PROJECT_NAME}/*
+# This is used to remove the hidden (dot) files.
+	sudo -u beta rm -rf /home/beta/web/${PROJECT_NAME}/.??*
+	sudo -u beta rmdir /home/beta/web/${PROJECT_NAME}
+
+# Pull the files from the repository.
+	sudo -u beta svn checkout http://localhost/svn/${PROJECT_NAME} /home/beta/web/${PROJECT_NAME}
+
+	;;
+
+
+    *)
+        echo "Error - Invalid project type."
+        exit -1
+esac
+
+
+
+
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -438,8 +552,31 @@ echo `date`
 ##echo "Here we need to set up the configuration file at /etc/pullpush/projects/<project_name>..."
 # -------------------------------------------------------------------------------------------------
 
-##sudo mkdir -p /etc/pullpush/projects
-##echo PROJECT_TYPE=drupal7\n >> '/etc/pullpush/projects/${PROJECT_NAME}'
+sudo mkdir -p /etc/pullpush/projects
+
+case "${PROJECT_TYPE}" in
+
+    drupal7)
+	sudo sh -c 'echo "PROJECT_TYPE=drupal7\n" >> /etc/pullpush/projects/${PROJECT_NAME}.conf'
+	;;
+
+    drupal6)
+	sudo sh -c 'echo "PROJECT_TYPE=drupal6\n" >> /etc/pullpush/projects/${PROJECT_NAME}.conf'
+	;;
+
+    symfonymysql)
+	sudo sh -c 'echo "PROJECT_TYPE=drupal6\n" >> /etc/pullpush/projects/${PROJECT_NAME}.conf'
+	;;
+
+    phpmysql)
+	sudo sh -c 'echo "PROJECT_TYPE=drupal6\n" >> /etc/pullpush/projects/${PROJECT_NAME}.conf'
+	;;
+
+    *)
+	echo "Error - Invalid project type."
+	exit -1
+esac
+
 
 
 exit 0
