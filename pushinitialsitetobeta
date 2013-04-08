@@ -556,19 +556,19 @@ sudo mkdir -p /etc/pullpush/projects
 case "${PROJECT_TYPE}" in
 
     drupal7)
-	sudo sh -c 'echo "PROJECT_TYPE=drupal7\n" >> /etc/pullpush/projects/${PROJECT_NAME}.conf'
+	sudo sh -c "echo PROJECT_TYPE=drupal7\n >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	;;
 
     drupal6)
-	sudo sh -c 'echo "PROJECT_TYPE=drupal6\n" >> /etc/pullpush/projects/${PROJECT_NAME}.conf'
+	sudo sh -c "echo PROJECT_TYPE=drupal6\n >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	;;
 
     symfonymysql)
-	sudo sh -c 'echo "PROJECT_TYPE=drupal6\n" >> /etc/pullpush/projects/${PROJECT_NAME}.conf'
+	sudo sh -c "echo PROJECT_TYPE=symfonymysql\n >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	;;
 
     phpmysql)
-	sudo sh -c 'echo "PROJECT_TYPE=drupal6\n" >> /etc/pullpush/projects/${PROJECT_NAME}.conf'
+	sudo sh -c "echo PROJECT_TYPE=phpmysql\n >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	;;
 
     *)

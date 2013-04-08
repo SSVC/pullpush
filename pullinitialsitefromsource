@@ -152,19 +152,19 @@ case "${SERVER_TYPE}" in
 	# First we need to copy the relevant vhost template file.
 	case ${PROJECT_TYPE} in
 	    drupal7)
-		echo "Copy the Drupal 7 vhost template..."
+		echo "Copy the drupal7 vhost template..."
 		sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
                 ;;
             drupal6)
-		echo "Copy the Drupal 6 vhost template..."
+		echo "Copy the drupal6 vhost template..."
 		sudo cp /usr/local/share/pullpush/vhost_drupal6.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
                 ;;
 	    symfonymysql)
-		echo "Copy the Symfony vhost template..."
+		echo "Copy the symfonymysql vhost template..."
 		sudo cp /usr/local/share/pullpush/vhost_symfonymysql.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
                 ;;
 	    phpmysql)
-		echo "Copy the Symfony vhost template..."
+		echo "Copy the phpmysql vhost template..."
 		sudo cp /usr/local/share/pullpush/vhost_phpmysql.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
                 ;;
 	    *)
@@ -195,11 +195,11 @@ case "${SERVER_TYPE}" in
 
 	case ${PROJECT_TYPE} in
 	    drupal7)
-		echo "Copy the Drupal 7 vhost template..."
+		echo "Copy th drupal7 vhost template..."
 		sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
                 ;;
             drupal6)
-		echo "Copy the Drupal 6 vhost template..."
+		echo "Copy the drupal6 vhost template..."
 		sudo cp /usr/local/share/pullpush/vhost_drupal6.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
                 ;;
 	    symfonymysql)

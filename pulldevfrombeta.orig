@@ -4,7 +4,7 @@
 # Pull dev from beta
 
 # -------------------------------------------------------------------------------------------------
-# Script which will make a dev copy of a website which is a copy of the current beta version.
+# Script which will make the current dev copy of a website a copy of the current beta version.
 # -------------------------------------------------------------------------------------------------
 
 # -------------------------------------------------------------------------------------------------
@@ -38,208 +38,26 @@ else
     exit -1
 fi
 
-PROJECT_NAME=${1}
-
-## This file may not be needed.
 # Check the variables file exists.
-##if [ -e ~/.pullpush/${1} ]
-##then
-##        source ~/.pullpush/$1
-##else
-##        echo "ERROR - Configuration file $1 not found."
-##        exit -1
-##fi
+if [ -e ~/.pullpush/${1} ]
+then
+        source ~/.pullpush/$1
+else
+        echo "ERROR - Configuration file $1 not found."
+        exit -1
+fi
 
 # Check the global settings file exists.
-if [ -e /etc/pullpush/projects/${PROJECT_NAME}.conf ]
+if [ -e /home/pullpush/.pullpush/projects/${1} ]
 then
-        source /etc/pullpush/projects/${PROJECT_NAME}.conf
+        source /home/pullpush/.pullpush/projects/${1}
 else
-        echo "ERROR - The global configuration file /etc/pullpush/projects/${PROJECT_NAME}.conf not found.  This indicates a beta version does not exist."
+        echo "ERROR - Global configuration file $1 not found."
         exit -1
 fi
+
 
 DATE_TIME=`date +%Y%m%d-%H%M%S`
-
-
-# -------------------------------------------------------------------------------------------------
-echo
-echo `date`
-echo "Make backup copy of the beta site..."
-# -------------------------------------------------------------------------------------------------
-mkdir -p ~/backups/beta_sites
-sudo mysqldump beta${PROJECT_NAME} > /home/${USER}/backups/beta_sites/beta${PROJECT_NAME}_${DATE_TIME}.sql
-tar --create --file=/home/${USER}/backups/beta_sites/beta${PROJECT_NAME}_${DATE_TIME}.tar /home/${USER}/projects/${PROJECT_NAME}
-
-
-
-# -------------------------------------------------------------------------------------------------------
-echo
-echo `date`
-echo "For Drupal 7 and Drupal 6 sites we will create archives which can be reloaded into the dev site..."
-# -------------------------------------------------------------------------------------------------------
-
-case "${PROJECT_TYPE}" in
-
-    drupal7)
-        echo
-	echo `date`
-	echo "Create an archive of a Drupal 7 site..."
-
-	drush --root=/home/${USER}/initial_sites/${INITIAL_SITE_NAME} archive-dump --destination=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_archive_${DATE_TIME}.tar
-        ;;
-
-    drupal6)
-        echo
-	echo `date`
-	echo "Create an archive of a Drupal 6 site..."
-
-	drush --root=/home/${USER}/initial_sites/${INITIAL_SITE_NAME} archive-dump --destination=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_archive_${DATE_TIME}.tar
-        ;;
-
-    symfonymysql)
-        echo
-	echo `date`
-	echo "For symfonymysql the backup files will be used as archive files..."
-
-        ;;
-    
-    phpmysql)
-        echo
-	echo `date`
-	echo "For phpmysql the backup files will be used as archive files..."
-
-        ;;
-    
-    
-    *)
-        echo "Error - Invalid project type."
-        exit -1
-
-esac
-
-
-
-
-
-
-
-
-
-
-
-# -------------------------------------------------------------------------------------------------
-echo
-echo `date`
-echo "Checking if the development site exists - if it does not then it will be created..."
-# -------------------------------------------------------------------------------------------------
-
-if [ ! -e /home/${USER}/projects/${PROJECT_NAME} ]
-then
-
-    # Here we will add the vhost.
-case "${SERVER_TYPE}" in
-
-    debian)
-	echo
-	echo `date`
-        echo "Set up vhost on Debian."
-
-	# First we need to copy the relevant vhost template file.
-	case ${PROJECT_TYPE} in
-	    drupal7)
-		echo "Copy the drupal7 vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/sites-available/${USER}-${PROJECT_NAME}
-                ;;
-            drupal6)
-		echo "Copy the drupal6 vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_drupal6.template /etc/apache2/sites-available/${USER}-${PROJECT_NAME}
-                ;;
-	    symfonymysql)
-		echo "Copy the symfonymysql vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_symfonymysql.template /etc/apache2/sites-available/${USER}-${PROJECT_NAME}
-                ;;
-	    phpmysql)
-		echo "Copy the phpmysql vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_phpmysql.template /etc/apache2/sites-available/${USER}-${PROJECT_NAME}
-                ;;
-	    *)
-		echo "Error - Invalid project type."
-		exit -1
-        esac
-
-##        sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/sites-available/${USER}-initial-site-${INITIAL_SITE_NAME}
-
-        # Here we will update the vhost files as necessary.  There may be a more elegant way of doing this. 
-
-        sudo sed -i "s/documentroot/\/home\/${USER}\/projects\/${PROJECT_NAME}/g" /etc/apache2/sites-available/${USER}-${PROJECT_NAME}
-
-        sudo sed -i "s/username/${USER}/g" /etc/apache2/sites-available/${USER}-${PROJECT_NAME}
-        sudo sed -i "s/vhostname/${USER}-${PROJECT_NAME}/g" /etc/apache2/sites-available/${USER}-${PROJECT_NAME}
-        sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/sites-available/${USER}-${PROJECT_NAME}
-        sudo sed -i "s/serveradminemail/${SERVER_ADMIN_EMAIL}/g" /etc/apache2/sites-available/${USER}-${PROJECT_NAME}
-
-        sudo a2ensite ${USER}-${PROJECT_NAME}
-        sudo apache2ctl restart
-        ;;
-    
-    sles)
-	echo
-	echo `date`
-        echo "Set up a vhost on SLES."
-        ##sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
-
-	case ${PROJECT_TYPE} in
-	    drupal7)
-		echo "Copy th drupal7 vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_drupal7.template /etc/apache2/vhosts.d/${USER}-${PROJECT_NAME}.conf
-                ;;
-            drupal6)
-		echo "Copy the drupal6 vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_drupal6.template /etc/apache2/vhosts.d/${USER}-${PROJECT_NAME}.conf
-                ;;
-	    symfonymysql)
-		echo "Copy the symfonymysql vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_symfonymysql.template /etc/apache2/vhosts.d/${USER}-${PROJECT_NAME}.conf
-                ;;
-	    phpmysql)
-		echo "Copy the phpmysql vhost template..."
-		sudo cp /usr/local/share/pullpush/vhost_phpmysql.template /etc/apache2/vhosts.d/${USER}-${PROJECT_NAME}.conf
-                ;;
-	    *)
-		echo "Error - Invalid project type."
-		exit -1
-        esac
-
-        sudo sed -i "s/documentroot/\/home\/${USER}\/projects\/${PROJECT_NAME}/g" /etc/apache2/vhosts.d/${USER}-${PROJECT_NAME}.conf
-
-        sudo sed -i "s/username/${USER}/g" /etc/apache2/vhosts.d/${USER}-${PROJECT_NAME}.conf
-##        sudo sed -i "s/initialsitename/${INITIAL_SITE_NAME}/g" /etc/apache2/vhosts.d/${USER}-initial-site-${INITIAL_SITE_NAME}.conf
-        sudo sed -i "s/vhostname/${USER}-${PROJECT_NAME}/g" /etc/apache2/sites-available/${USER}-${PROJECT_NAME}.conf
-
-        sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/vhosts.d/${USER}-${PROJECT_NAME}.conf
-        sudo sed -i "s/serveradminemail/${SERVER_ADMIN_EMAIL}/g" /etc/apache2/vhosts.d/${USER}-${PROJECT_NAME}.conf
-
-        sudo /usr/sbin/rcapache2 restart
-        ;;
-
-    *)
-        echo "Error - Invalid server type."
-        exit -1
-esac
-
-
-
-
-
-
-
-
-fi
-
-
-
-exit
 
 # -------------------------------------------------------------------------------------------------
 echo
