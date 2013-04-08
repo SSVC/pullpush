@@ -159,7 +159,6 @@ case "${PROJECT_TYPE}" in
 esac
 
 
-: <<'QWERTY'
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -171,10 +170,10 @@ sudo svnadmin create /var/lib/svn/${PROJECT_NAME}
 # We will set the ownership to www-data as we will primarily be using HTTP to access the archive.
 sudo chown -R www-data:www-data /var/lib/svn/${PROJECT_NAME}
 
-QWERTY
 
 
-: <<'QWERTY'
+
+
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -270,7 +269,7 @@ case "${SERVER_TYPE}" in
         exit -1
 esac
 
-QWERTY
+
 
 
 
@@ -549,7 +548,7 @@ esac
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-##echo "Here we need to set up the configuration file at /etc/pullpush/projects/<project_name>..."
+echo "Here we need to set up the configuration file at /etc/pullpush/projects/<project_name>..."
 # -------------------------------------------------------------------------------------------------
 
 sudo mkdir -p /etc/pullpush/projects
@@ -576,6 +575,13 @@ case "${PROJECT_TYPE}" in
 	echo "Error - Invalid project type."
 	exit -1
 esac
+
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Finished - the new site is at http://beta-${PROJECT_NAME}.${SERVER_FQDN}..."
+# -------------------------------------------------------------------------------------------------
 
 
 
