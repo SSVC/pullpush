@@ -600,7 +600,6 @@ else
 ## ssh beta@localhost "svn status ${BETA_DOCUMENT_ROOT} | grep \"^\!\" | sed s/^\!// | sed s/[[:space:]]*// | xargs -i svn delete \"{}\""
     sudo -u beta sh -c "svn status /home/beta/web/${PROJECT_NAME} | grep \"^\!\" | sed s/^\!// | sed s/[[:space:]]*// | xargs -i svn delete \"{}\""
 
-
     echo "Committing and deleting the files which have changed in the beta files/ directory..."
 ##ssh beta@localhost "svn commit -m \"$DATE_TIME - Committing added/changed/deleted data files from beta into repository.\" ${BETA_DOCUMENT_ROOT} "
     sudo -u beta sh -c "svn commit -m \"${DATE_TIME} - Committing added/changed/deleted data files from beta into repository.\" /home/beta/web/${PROJECT_NAME} "
@@ -611,7 +610,7 @@ else
 # committing the beta files/ changes we can check the revision numbers and if they don't match then 
 # the repository must have been updated by another process.  This would then need to be investigated.
     echo "SVN update the local beta copy to get the revision number to match the repository revision..."
-    ssh beta@localhost "svn update ${BETA_DOCUMENT_ROOT}"
+    ##ssh beta@localhost "svn update ${BETA_DOCUMENT_ROOT}"
     sudo -u beta sh -c "svn update /home/beta/web/${PROJECT_NAME}"
 
 # -------------------------------------------------------------------------------------------------
@@ -641,13 +640,13 @@ else
 ###mysqladmin --force -u ${DEV_MYSQL_USER} -p${DEV_MYSQL_PASS} drop ${DEV_MYSQL_DATABASE}
 ###mysqladmin -u ${DEV_MYSQL_USER} -p${DEV_MYSQL_PASS} create ${DEV_MYSQL_DATABASE}
 
-    drush sql-sync @${BETA_SITE_NAME} @${DEV_SITE_NAME} --no-cache --source-dump=${BACKUP_LOCATION}sql_sync_dump.sql
+###    drush sql-sync @${BETA_SITE_NAME} @${DEV_SITE_NAME} --no-cache --source-dump=${BACKUP_LOCATION}sql_sync_dump.sql
 
 
-    sudo mysqladmin --force drop ${USER}${PROJECT}
-    sudo mysqladmin create ${USER}${PROJECT}
+    sudo mysqladmin --force drop ${USER}${PROJECT_NAME}
+    sudo mysqladmin create ${USER}${PROJECT_NAME}
 
-    mysql ${USER}${PROJECT} < /home/${USER}/backups/beta_sites/$PROJECT_NAME}_${DATE_TIME}.sql
+    sudo mysql ${USER}${PROJECT_NAME} < /home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.sql
 
 fi
 
