@@ -410,8 +410,6 @@ case "${PROJECT_TYPE}" in
 	sudo tar -x --file=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.tar --directory=/home/beta/web/${PROJECT_NAME} --strip-components=3
 	sudo chown -R beta:beta /home/beta/web/${PROJECT_NAME}
 	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
-
-
         ;;
 
     phpmysql)
@@ -421,8 +419,6 @@ case "${PROJECT_TYPE}" in
 	sudo tar -x --file=/home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.tar --directory=/home/beta/web/${PROJECT_NAME} --strip-components=3
 	sudo chown -R beta:beta /home/beta/web/${PROJECT_NAME}
 	sudo mysql ${DATABASE_NAME} < /home/${USER}/backups/initial_sites/${USER}initialsite${INITIAL_SITE_NAME}_${DATE_TIME}.sql
-
-
         ;;
     
     *)
@@ -441,9 +437,6 @@ echo "Here we will put the files into the repository from the initial copy..."
 ##svn import /home/beta/web/${PROJECT_NAME} http://localhost/svn/${PROJECT_NAME} -m "Initial import."
 
 svn import /home/${USER}/initial_sites/${INITIAL_SITE_NAME} http://localhost/svn/${PROJECT_NAME} -m "Initial import."
-
-##HERE HERE HERE HERE
-
 
 
 # -------------------------------------------------------------------------------------------------
