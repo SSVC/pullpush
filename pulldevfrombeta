@@ -562,6 +562,9 @@ else
     beta_svn_status_of_whole_site=$(svn -u status /home/beta/web/${PROJECT_NAME} | sort)
     beta_svn_status_of_files_directory=$(svn -u status /home/beta/web/${PROJECT_NAME}/sites/default/files | sort)
 
+echo "beta_svn_status_of_whole_site: ${beta_svn_status_of_whole_site}"
+echo "beta_svn_status_of_files_directory: ${beta_svn_status_of_files_directory}"
+
     if [ "$beta_svn_status_of_whole_site" != "$beta_svn_status_of_files_directory" ]
     then
 	echo "The beta site files has files which have been modified which are not in the files/ directory - this needs to be looked into."
@@ -576,6 +579,9 @@ else
 # Trying to get revision without authentication details.
 ####remote_revision=$(svn --username kevinb --password xxxxxxxx info http://svn.chalfont.ssvc.com/Technology/Websites/radio-v2 | grep '^Revision:' | awk '{print $2}')
     remote_revision=$(svn info http://localhost/svn/${PROJECT_NAME} | grep '^Revision:' | awk '{print $2}')
+
+echo "beta_local_revision: ${beta_local_revision}"
+echo "remote_revision: ${remote_revision}"
 
     if [ "$beta_local_revision" != "$remote_revision" ]
     then
