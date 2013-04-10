@@ -370,11 +370,16 @@ then
             exit -1
     esac
 
+    # -----------------------------------------------------------------------------------------------------------
     # Here we will clean out the files and replace them with files from the repository.
     # The site was initially rebuilt from an archive backup to ensure the settings file was created properly.  We 
     # are going to keep a safe copy of the settings file.  The other files will be deleted and pulled out from 
     # the SVN repository.  This means that all code is always transferred via the code repository and so is 
     # safely versioned.
+    # -----------------------------------------------------------------------------------------------------------
+
+    # First of all we need to push the beta files into the repository to ensure we are pulling out the latest version.
+
     case "${PROJECT_TYPE}" in
 
 	drupal7)

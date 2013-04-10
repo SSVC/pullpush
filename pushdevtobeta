@@ -21,6 +21,10 @@ tee < ${logfile}.pipe $logfile &
 exec &> ${logfile}.pipe
 rm ${logfile}.pipe
 
+# -------------------------------------------------------------------------------------------------
+# Check the parameter and bring in the configuration files.
+# -------------------------------------------------------------------------------------------------
+
 echo
 echo `date`
 echo "Testing for argument which should be the project name..."
@@ -52,49 +56,9 @@ if [ -e /etc/pullpush/projects/${PROJECT_NAME}.conf ]
 then
     source /etc/pullpush/projects/${PROJECT_NAME}.conf
 else
-    echo "ERROR - The global configuration file /etc/pullpush/projects/${PROJECT_NAME}.conf not found.  This indicates a beta version does not exist."
+    echo "ERROR - The global configuration file /etc/pullpush/projects/${PROJECT_NAME}.conf not found."
     exit -1
 fi
-
-# -------------------------------------------------------------------------------------------------
-# We are going to bring in a parameter which will be used to pull in a file containing values for
-# variables - this is to prevent users accidentally using someone elses databases and web space.
-# -------------------------------------------------------------------------------------------------
-
-: <<'QWERTY'
-echo
-echo `date`
-echo "Testing for argument..."
-if [ $1 ]
-then
-    echo "Argument supplied OK as $1"
-    echo
-else
-    echo "ERROR - No argument supplied"
-    exit -1
-fi
-
-# Check the variables file exists.
-if [ -e ~/.pullpush/${1} ]
-then
-        source ~/.pullpush/$1
-else
-        echo "ERROR - Configuration file $1 not found."
-        exit -1
-fi
-
-# Check the global settings file exists.
-if [ -e /home/pullpush/.pullpush/projects/${1} ]
-then
-        source /home/pullpush/.pullpush/projects/${1}
-else
-        echo "ERROR - Global configuration file $1 not found."
-        exit -1
-fi
-
-DATE_TIME=`date +%Y%m%d-%H%M%S`
-
-QWERTY
 
 # -------------------------------------------------------------------------------------------------
 echo
