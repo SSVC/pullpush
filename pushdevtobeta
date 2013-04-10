@@ -21,10 +21,47 @@ tee < ${logfile}.pipe $logfile &
 exec &> ${logfile}.pipe
 rm ${logfile}.pipe
 
+echo
+echo `date`
+echo "Testing for argument which should be the project name..."
+if [ $1 ]
+then
+    echo "Argument supplied OK as $1"
+    echo
+else
+    echo "ERROR - No argument supplied"
+    exit -1
+fi
+
+# Set up variables used through this script.
+PROJECT_NAME=${1}
+DATE_TIME=`date +%Y%m%d-%H%M%S`
+
+# Check the Pullpush configuration file exists.
+if [ -e /etc/pullpush/pullpush.conf ]
+then
+    source /etc/pullpush/pullpush.conf
+else
+    echo
+    echo "ERROR - Pullpush configuration file not found."
+    exit -1
+fi
+
+# Check the project settings file exists.
+if [ -e /etc/pullpush/projects/${PROJECT_NAME}.conf ]
+then
+    source /etc/pullpush/projects/${PROJECT_NAME}.conf
+else
+    echo "ERROR - The global configuration file /etc/pullpush/projects/${PROJECT_NAME}.conf not found.  This indicates a beta version does not exist."
+    exit -1
+fi
+
 # -------------------------------------------------------------------------------------------------
 # We are going to bring in a parameter which will be used to pull in a file containing values for
 # variables - this is to prevent users accidentally using someone elses databases and web space.
 # -------------------------------------------------------------------------------------------------
+
+: <<'QWERTY'
 echo
 echo `date`
 echo "Testing for argument..."
@@ -57,6 +94,8 @@ fi
 
 DATE_TIME=`date +%Y%m%d-%H%M%S`
 
+QWERTY
+
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
@@ -71,16 +110,16 @@ echo "Take sites offline..."
 # drush @${BETA_SITE_NAME} vset --always-set site_offline 1
 
 # These commands work for Drupal 7.
-drush @${DEV_SITE_NAME} vset maintenance_mode 1 --yes
-drush @${BETA_SITE_NAME} vset maintenance_mode 1 --yes
+##drush @${DEV_SITE_NAME} vset maintenance_mode 1 --yes
+##drush @${BETA_SITE_NAME} vset maintenance_mode 1 --yes
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
 echo "Changing permissions on the files/ directory to enable the script user to be able to work with wwwrun owned files..."
 # -------------------------------------------------------------------------------------------------
-sudo chmod -R 777 ${BETA_DOCUMENT_ROOT}/sites/default/files
-sudo chmod -R 777 ${DEV_DOCUMENT_ROOT}/sites/default/files
+##sudo chmod -R 777 ${BETA_DOCUMENT_ROOT}/sites/default/files
+##sudo chmod -R 777 ${DEV_DOCUMENT_ROOT}/sites/default/files
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -89,8 +128,11 @@ echo "Clearing out the caches on the sites to trim the database and files/ befor
 # -------------------------------------------------------------------------------------------------
 
 # Bear in mind here that we may need to chmod the /files directory to 777 if we are not using Apache-ITK.
-drush @${DEV_SITE_NAME} cache-clear all
-drush @${BETA_SITE_NAME} cache-clear all
+##drush @${DEV_SITE_NAME} cache-clear all
+##drush @${BETA_SITE_NAME} cache-clear all
+
+drush --root=/home/${USER}/projects/${PROJECT_NAME} cache-clear all
+drush --root=/home/beta/web/${PROJECT_NAME} cache-clear all
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -98,17 +140,22 @@ echo `date`
 echo "Make backup copy of the dev site..."
 # -------------------------------------------------------------------------------------------------
 
-mkdir -p ${BACKUP_LOCATION}
-mysqldump -u ${DEV_MYSQL_USER} -p${DEV_MYSQL_PASS} ${DEV_MYSQL_DATABASE} > ${BACKUP_LOCATION}${DATE_TIME}_${DEV_MYSQL_DATABASE}.sql
-tar --create --file=${BACKUP_LOCATION}${DATE_TIME}_${DEV_SITE_NAME}.tar ${DEV_DOCUMENT_ROOT}
+mkdir -p /home/${USER}/backups/dev_sites
+sudo mysqldump ${USER}${PROJECT_NAME} > /home/${USER}/backups/dev_sites/${PROJECT_NAME}_${DATE_TIME}.sql
+tar --create --file=/home/${USER}/backups/dev_sites/${PROJECT_NAME}_${DATE_TIME}.tar /home/${USER}/projects/${PROJECT_NAME}
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
 echo "Make backup copy of the beta site..."
 # -------------------------------------------------------------------------------------------------
-mysqldump -u ${BETA_MYSQL_USER} -p${BETA_MYSQL_PASS} ${BETA_MYSQL_DATABASE} > ${BACKUP_LOCATION}${DATE_TIME}_${BETA_MYSQL_DATABASE}.sql
-tar --create --file=${BACKUP_LOCATION}${DATE_TIME}_${BETA_SITE_NAME}.tar ${BETA_DOCUMENT_ROOT}
+##mysqldump -u ${BETA_MYSQL_USER} -p${BETA_MYSQL_PASS} ${BETA_MYSQL_DATABASE} > ${BACKUP_LOCATION}${DATE_TIME}_${BETA_MYSQL_DATABASE}.sql
+##tar --create --file=${BACKUP_LOCATION}${DATE_TIME}_${BETA_SITE_NAME}.tar ${BETA_DOCUMENT_ROOT}
+
+mkdir -p /home/${USER}/backups/beta_sites
+sudo mysqldump beta${PROJECT_NAME} > /home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.sql
+sudo tar --create --file=/home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.tar /home/beta/web/${PROJECT_NAME}
+
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -123,9 +170,12 @@ echo "Check local version of the code matches the current SVN version - if it do
 # We would need to see where that update come from and what (if any) database changes were made.
 # file changes to SVN.
 
-dev_local_revision=$(svn info ${DEV_DOCUMENT_ROOT} | grep '^Revision:' | sed s/^Revision:[[:space:]]*// )
+dev_local_revision=$(svn info /home/${USER}/projects/${PROJECT_NAME} | grep '^Revision:' | sed s/^Revision:[[:space:]]*// )
 
-remote_revision=$(svn info ${SVN_URL} | grep '^Revision:' | awk '{print $2}')
+remote_revision=$(svn info http://localhost/svn/${PROJECT_NAME} | grep '^Revision:' | awk '{print $2}')
+
+echo "dev_local_revision:${dev_local_revision}"
+echo "remote_revision:${remote_revision}"
 
 if [ "$dev_local_revision" != "$remote_revision" ]
 then
@@ -141,13 +191,13 @@ echo "Add/Delete locally added and deleted files..."
 
 
 echo "Adding all new files to svn control list..."
-svn status ${DEV_DOCUMENT_ROOT} | grep "^?" | sed s/^?// | sed s/[[:space:]]*// | xargs -i svn add "{}" 
+svn status /home/${USER}/projects/${PROJECT_NAME} | grep "^?" | sed s/^?// | sed s/[[:space:]]*// | xargs -i svn add "{}" 
 
 echo "If files have been deleted then SVN needs to mark them for deletion..."
-svn status ${DEV_DOCUMENT_ROOT} | grep "^\!" | sed s/^\!// | sed s/[[:space:]]*// | xargs -i svn delete "{}" 
+svn status /home/${USER}/projects/${PROJECT_NAME} | grep "^\!" | sed s/^\!// | sed s/[[:space:]]*// | xargs -i svn delete "{}" 
 
 echo "Committing and deleting the files which have changed in dev..."
-svn commit -m "$DATE_TIME - Committing added/changed/deleted data files from ${DEV_SITE_NAME} into repository." ${DEV_DOCUMENT_ROOT}
+svn commit -m "${DATE_TIME} - Committing added/changed/deleted data files from ${USER}-${PROJECT_NAME} into repository." /home/${USER}/projects/${PROJECT_NAME}
 
 # Now we will run an update - the reason for this is so the revision number of dev local and
 # the repository will match and can therefore be tested before running the next commit from dev.
@@ -155,7 +205,7 @@ svn commit -m "$DATE_TIME - Committing added/changed/deleted data files from ${D
 # committing the dev files changes we can check the revision numbers and if they don't match then 
 # the repository must have been updated by another process.  This would then need to be investigated.
 echo "SVN update the local dev copy to get the revision number to match the repository revision..."
-svn update ${DEV_DOCUMENT_ROOT}
+svn update /home/${USER}/projects/${PROJECT_NAME}
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -163,30 +213,40 @@ echo `date`
 echo "SVN update beta site files from SVN..."
 # -------------------------------------------------------------------------------------------------
 
-ssh beta@localhost "svn update ${BETA_DOCUMENT_ROOT}"
+##ssh beta@localhost "svn update /home/beta/web/${PROJECT_NAME}"
+sudo -u beta sh -c "svn update /home/beta/web/${PROJECT_NAME}"
 
 # NB Now we need to chmod permissions on the files/ directory to enable the web server to manipulate
 # these files.
-sudo chmod -R 777 ${BETA_DOCUMENT_ROOT}/sites/default/files
+##sudo chmod -R 777 ${BETA_DOCUMENT_ROOT}/sites/default/files
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
 echo "Copy database from dev to beta..."
 # -------------------------------------------------------------------------------------------------
-mysqladmin --force -u ${BETA_MYSQL_USER} -p${BETA_MYSQL_PASS} drop ${BETA_MYSQL_DATABASE}
-mysqladmin -u ${BETA_MYSQL_USER} -p${BETA_MYSQL_PASS} create ${BETA_MYSQL_DATABASE}
+##mysqladmin --force -u ${BETA_MYSQL_USER} -p${BETA_MYSQL_PASS} drop ${BETA_MYSQL_DATABASE}
+##mysqladmin -u ${BETA_MYSQL_USER} -p${BETA_MYSQL_PASS} create ${BETA_MYSQL_DATABASE}
 
-rm ${BACKUP_LOCATION}sql_sync_dump.sql
-drush sql-sync @${DEV_SITE_NAME} @${BETA_SITE_NAME} --no-cache --source-dump=${BACKUP_LOCATION}sql_sync_dump.sql
+##rm ${BACKUP_LOCATION}sql_sync_dump.sql
+##drush sql-sync @${DEV_SITE_NAME} @${BETA_SITE_NAME} --no-cache --source-dump=${BACKUP_LOCATION}sql_sync_dump.sql
+
+    sudo mysqladmin --force drop beta${PROJECT_NAME}
+    sudo mysqladmin create beta${PROJECT_NAME}
+
+    sudo mysql beta${PROJECT_NAME} < /home/${USER}/backups/dev_sites/${PROJECT_NAME}_${DATE_TIME}.sql
+
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
 echo "Here we will clear out the caches again - this is needed by some modules such as ldap..."
 # -------------------------------------------------------------------------------------------------
-drush @${DEV_SITE_NAME} cache-clear all
-drush @${BETA_SITE_NAME} cache-clear all
+##drush @${DEV_SITE_NAME} cache-clear all
+##drush @${BETA_SITE_NAME} cache-clear all
+
+drush --root=/home/${USER}/projects/${PROJECT_NAME} cache-clear all
+drush --root=/home/beta/web/${PROJECT_NAME} cache-clear all
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -199,8 +259,8 @@ echo "Bring sites online..."
 ##drush @${BETA_SITE_NAME} vset --always-set site_offline 0
 
 # These commands work for Drupal 7.
-drush @${DEV_SITE_NAME} vset maintenance_mode 0 --yes
-drush @${BETA_SITE_NAME} vset maintenance_mode 0 --yes
+##drush @${DEV_SITE_NAME} vset maintenance_mode 0 --yes
+##drush @${BETA_SITE_NAME} vset maintenance_mode 0 --yes
 
 
 # -------------------------------------------------------------------------------------------------
