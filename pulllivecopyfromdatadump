@@ -130,8 +130,6 @@ if [ ! -e /home/livecopy/web/${PROJECT_NAME} ]
 then
 
 # Here we will add the vhost.
-: <<'QWERTY'
-
 
     case "${SERVER_TYPE}" in
 
@@ -217,7 +215,7 @@ then
             exit -1
     esac
 
-QWERTY
+
 
 ## Here we will create the database username and password.
 
@@ -413,13 +411,31 @@ else
 ##    ssh livecopy@localhost "tar -x --file=/home/livecopy/live_dump/${PROJECT_NAME}/${DATETIME_STAMP}_live_${PROJECT_NAME}.tar --directory=/home/livecopy/web/${PROJECT_NAME} --strip-components=1"
 
 
-    sudo chmod -R 777 /home/livecopy/web/${PROJECT_NAME}/sites/default
-    sudo -u livecopy rm -rf /home/livecopy/web/${PROJECT_NAME}/*
+##    sudo chmod -R 777 /home/livecopy/web/${PROJECT_NAME}/sites/default
+##    sudo -u livecopy rm -rf /home/livecopy/web/${PROJECT_NAME}/*
 # This is used to remove the hidden (dot) files.
-    sudo -u livecopy rm -rf /home/livecopy/web/${PROJECT_NAME}/.??*
+##    sudo -u livecopy rm -rf /home/livecopy/web/${PROJECT_NAME}/.??*
 ##    sudo -u livecopy rmdir /home/livecopy/web/${PROJECT_NAME}
 
+##    sudo -u livecopy tar -x --file=/home/livecopy/data_dumps/${PROJECT_NAME}_${DATADUMP_DATETIME_STAMP}.tar --directory=/home/livecopy/web/${PROJECT_NAME} --strip-components=4
+
+
+            # Remove the existing files.
+	    sudo chmod -R 777 /home/livecopy/web/${PROJECT_NAME}
+	    sudo -u livecopy rm -rf /home/livecopy/web/${PROJECT_NAME}/*
+            # This is used to remove the hidden (dot) files.
+	    sudo -u livecopy rm -rf /home/livecopy/web/${PROJECT_NAME}/.??*
+	    ## sudo rmdir /home/deploy/web/${PROJECT_NAME}
+
+            # Pull the files from the repository.
+	    ## sudo -u deploy sh -c "svn checkout http://localhost/svn/${PROJECT_NAME} /home/deploy/web/${PROJECT_NAME}"
     sudo -u livecopy tar -x --file=/home/livecopy/data_dumps/${PROJECT_NAME}_${DATADUMP_DATETIME_STAMP}.tar --directory=/home/livecopy/web/${PROJECT_NAME} --strip-components=4
+
+            # Copy back in the settings file.
+	    sudo -u livecopy cp /home/livecopy/settings.php.${PROJECT_NAME} /home/livecopy/web/${PROJECT_NAME}/sites/default/settings.php
+
+            sudo apache2ctl restart
+
 
 
 # -------------------------------------------------------------------------------------------------
@@ -427,7 +443,7 @@ else
     echo `date`
     echo "Now we will copy back in the original settings file..."
 # -------------------------------------------------------------------------------------------------
-    sudo -u livecopy cp /home/livecopy/settings.php.${PROJECT_NAME} /home/livecopy/web/${PROJECT_NAME}/sites/default/settings.php
+####    sudo -u livecopy cp /home/livecopy/settings.php.${PROJECT_NAME} /home/livecopy/web/${PROJECT_NAME}/sites/default/settings.php
 
 
 fi

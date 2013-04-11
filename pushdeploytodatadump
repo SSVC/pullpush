@@ -110,7 +110,9 @@ echo "Take site offline..."
 
 # These commands work for Drupal 7.
 ##drush ${DEPLOY_DRUSH_ALIAS} vset maintenance_mode 1 --yes
-drush --root=/home/deploy/web/${PROJECT_NAME} vset maintenance_mode 1 --yes
+
+## Todo - this can be added back in later.
+####drush --root=/home/deploy/web/${PROJECT_NAME} vset maintenance_mode 1 --yes
 
 
 # -------------------------------------------------------------------------------------------------
@@ -174,7 +176,9 @@ echo "Bring site back online..."
 # drush @${BETA_SITE_NAME} vset --always-set site_offline 1
 
 # These commands work for Drupal 7.
-drush --root=/home/deploy/web/${PROJECT_NAME} vset maintenance_mode 0 --yes
+
+# Todo - this can be added back in later.
+####drush --root=/home/deploy/web/${PROJECT_NAME} vset maintenance_mode 0 --yes
 
 
 
