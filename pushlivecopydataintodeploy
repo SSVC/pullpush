@@ -26,6 +26,10 @@ rm ${logfile}.pipe
 # variables - this is to prevent users accidentally using someone elses databases and web space.
 # -------------------------------------------------------------------------------------------------
 
+: <<'QWERTY'
+
+
+
 echo
 echo `date`
 echo "Testing for argument..."
@@ -90,18 +94,58 @@ transfer_icms_data
 
 done
 
+QWERTY
 
 
+echo
+echo `date`
+echo "Testing for argument which should be the project name..."
+if [ $1 ]
+then
+    echo "Argument supplied OK as $1"
+    echo
+else
+    echo "ERROR - No argument supplied"
+    exit -1
+fi
 
+echo
+echo `date`
+echo "Testing for argument which should be the content types..."
+if [ $2 ]
+then
+    echo "Argument supplied OK as $2"
+    echo
+else
+    echo "ERROR - No argument supplied"
+    exit -1
+fi
 
+# Set up variables used through this script.
+PROJECT_NAME=${1}
+CONTENT_TYPES=${2}
+DATE_TIME=`date +%Y%m%d-%H%M%S`
+
+# Check the Pullpush configuration file exists.
+if [ -e /etc/pullpush/pullpush.conf ]
+then
+    source /etc/pullpush/pullpush.conf
+else
+    echo
+    echo "ERROR - Pullpush configuration file not found."
+    exit -1
+fi
+
+# Check the project settings file exists.
+if [ -e /etc/pullpush/projects/${PROJECT_NAME}.conf ]
+then
+    source /etc/pullpush/projects/${PROJECT_NAME}.conf
+else
+    echo "ERROR - The configuration file /etc/pullpush/projects/${PROJECT_NAME}.conf not found."
+    exit -1
+fi
 
 ## exit
-
-
-
-
-
-
 
 
 
@@ -121,27 +165,67 @@ echo
 echo `date`
 echo "Installing the data export import module into the livecopy website..."
 # -------------------------------------------------------------------------------------------------
-ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} pm-download data_export_import"
-ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} --yes pm-enable data_export_import"
+##ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} pm-download data_export_import"
+##ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} --yes pm-enable data_export_import"
+
+sudo -u livecopy drush --root=/home/livecopy/web/${PROJECT_NAME} pm-download data_export_import
+sudo -u livecopy drush --root=/home/livecopy/web/${PROJECT_NAME} --yes pm-enable data_export_import
+
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
 echo "Installing the data export import module into the deploy website..."
 # -------------------------------------------------------------------------------------------------
-ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} pm-download data_export_import"
-ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} --yes pm-enable data_export_import"
+##ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} pm-download data_export_import"
+##ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} --yes pm-enable data_export_import"
+
+sudo -u deploy drush --root=/home/deploy/web/${PROJECT_NAME} pm-download data_export_import
+sudo -u deploy drush --root=/home/deploy/web/${PROJECT_NAME} --yes pm-enable data_export_import
+
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
 echo "Copy the users across..."
 # -------------------------------------------------------------------------------------------------
-USER_FILE_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex users")
+##USER_FILE_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex users")
+USER_FILE_PRODUCED=$(sudo -u livecopy drush --root=/home/livecopy/web/${PROJECT_NAME} dei-ex users)
 
-ssh deploy@localhost "mkdir -p ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users"
-ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${FILENAME}"
-ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+echo "USER_FILE_PRODUCED:${USER_FILE_PRODUCED}"
+
+
+#ssh deploy@localhost "mkdir -p ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users"
+#ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${FILENAME}"
+#ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+
+sudo -u deploy mkdir -p /home/deploy/web/${PROJECT_NAME}/sites/default/files/data_export_import/users
+sudo -u deploy cp /home/livecopy/web/${PROJECT_NAME}/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} /home/deploy/web/${PROJECT_NAME}/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED}
+##ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+sudo -u deploy drush --root=/home/deploy/web/${PROJECT_NAME} dei-im users --file=${USER_FILE_PRODUCED}
+
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Copy the terms across..."
+# -------------------------------------------------------------------------------------------------
+##USER_FILE_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex users")
+TERM_FILE_PRODUCED=$(sudo -u livecopy drush --root=/home/livecopy/web/${PROJECT_NAME} dei-ex terms)
+
+echo "TERM_FILE_PRODUCED:${TERM_FILE_PRODUCED}"
+
+
+#ssh deploy@localhost "mkdir -p ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users"
+#ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${FILENAME}"
+#ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+
+sudo -u deploy mkdir -p /home/deploy/web/${PROJECT_NAME}/sites/default/files/data_export_import/taxonomy_terms
+sudo -u deploy cp /home/livecopy/web/${PROJECT_NAME}/sites/default/files/data_export_import/taxonomy_terms/${TERM_FILE_PRODUCED} /home/deploy/web/${PROJECT_NAME}/sites/default/files/data_export_import/taxonomy_terms/${TERM_FILE_PRODUCED}
+##ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+sudo -u deploy drush --root=/home/deploy/web/${PROJECT_NAME} dei-im terms --file=${TERM_FILE_PRODUCED}
+
+
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -149,19 +233,28 @@ echo `date`
 echo "Copy the nodes across..."
 # -------------------------------------------------------------------------------------------------
 ##ssh livecopy@localhost "drush @livecopy_${PROJECT_NAME} dei-ex nodes --content-types=${NODE_CONTENT_TYPES}" > files.txt
-FILES_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex nodes --content-types=${NODE_CONTENT_TYPES}")
 
-echo "..."
-echo $FILES_PRODUCED
-echo ",,,"
+
+##FILES_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex nodes --content-types=${NODE_CONTENT_TYPES}")
+FILES_PRODUCED=$(sudo -u livecopy drush --root=/home/livecopy/web/${PROJECT_NAME} dei-ex nodes --content-types=${CONTENT_TYPES})
+
+
+
+echo "FILES_PRODUCED:${FILES_PRODUCED}"
+
+
 
 for FILENAME in $FILES_PRODUCED
 do 
-    echo "$FILENAME"
+    echo "File being imported:${FILENAME}"
 
-    ssh deploy@localhost "mkdir -p ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes"
-    ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes/${FILENAME} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes/${FILENAME}"
-    ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im nodes --file=${FILENAME}"
+#    ssh deploy@localhost "mkdir -p ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes"
+#    ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes/${FILENAME} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes/${FILENAME}"
+#    ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im nodes --file=${FILENAME}"
+
+    sudo -u deploy mkdir -p /home/deploy/web/${PROJECT_NAME}/sites/default/files/data_export_import/nodes
+    sudo -u deploy cp /home/livecopy/web/${PROJECT_NAME}/sites/default/files/data_export_import/nodes/${FILENAME} /home/deploy/web/${PROJECT_NAME}/sites/default/files/data_export_import/nodes/${FILENAME}
+    sudo -u deploy drush --root=/home/deploy/web/${PROJECT_NAME} dei-im nodes --file=${FILENAME}
 
 done
 
@@ -173,17 +266,12 @@ done
 ## Sort out the extra requirements.
 
 ## Carry out project extras.
-
-for EXTRA in $PROJECT_EXTRAS
-do
-    echo
-    echo "EXTRA"
-    echo "$EXTRA"
-
-
-
-
-done
+##for EXTRA in $PROJECT_EXTRAS
+##do
+##    echo
+##    echo "EXTRA"
+##    echo "$EXTRA"
+##done
 
 
 
@@ -204,3 +292,5 @@ echo
 echo `date`
 echo "Finished."
 # -------------------------------------------------------------------------------------------------
+
+exit 0
