@@ -4,7 +4,7 @@
 # Push deploy to data dump
 
 # -------------------------------------------------------------------------------------------------
-# Script which will make the current dev copy of a website a copy of the current beta version.
+# This script will dump out the deploy copy to data files ready for deployment the the live server.
 # -------------------------------------------------------------------------------------------------
 
 # -------------------------------------------------------------------------------------------------
@@ -25,6 +25,8 @@ rm ${logfile}.pipe
 # We are going to bring in a parameter which will be used to pull in a file containing values for
 # variables - this is to prevent users accidentally using someone elses databases and web space.
 # -------------------------------------------------------------------------------------------------
+: <<'QWERTY'
+
 
 echo
 echo `date`
@@ -55,10 +57,43 @@ else
         echo "ERROR - Global configuration file $1 not found."
         exit -1
 fi
+QWERTY
 
+echo
+echo `date`
+echo "Testing for argument which should be the project name..."
+if [ $1 ]
+then
+    echo "Argument supplied OK as $1"
+    echo
+else
+    echo "ERROR - No argument supplied"
+    exit -1
+fi
+
+# Set up variables used through this script.
 PROJECT_NAME=${1}
+DATE_TIME=`date +%Y%m%d-%H%M%S`
 
-DATE_TIME=`date +%Y%m%d_%H%M%S`
+# Check the Pullpush configuration file exists.
+if [ -e /etc/pullpush/pullpush.conf ]
+then
+    source /etc/pullpush/pullpush.conf
+else
+    echo
+    echo "ERROR - Pullpush configuration file not found."
+    exit -1
+fi
+
+# Check the project settings file exists.
+if [ -e /etc/pullpush/projects/${PROJECT_NAME}.conf ]
+then
+    source /etc/pullpush/projects/${PROJECT_NAME}.conf
+else
+    echo "ERROR - The configuration file /etc/pullpush/projects/${PROJECT_NAME}.conf not found."
+    exit -1
+fi
+
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -74,14 +109,16 @@ echo "Take site offline..."
 # drush @${BETA_SITE_NAME} vset --always-set site_offline 1
 
 # These commands work for Drupal 7.
-drush ${DEPLOY_DRUSH_ALIAS} vset maintenance_mode 1 --yes
+##drush ${DEPLOY_DRUSH_ALIAS} vset maintenance_mode 1 --yes
+drush --root=/home/deploy/web/${PROJECT_NAME} vset maintenance_mode 1 --yes
+
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
 echo "Changing permissions on the files/ directory to enable the script user to be able to work with wwwrun owned files..."
 # -------------------------------------------------------------------------------------------------
-sudo chmod -R 777 ${DEPLOY_DOCUMENT_ROOT}/sites/default/files
+##sudo chmod -R 777 ${DEPLOY_DOCUMENT_ROOT}/sites/default/files
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -93,7 +130,7 @@ echo "Clearing out the caches on the sites to trim the database and files/ befor
 
 # Clear out the caches on the beta site.  As the dev copy will become a copy of the beta site we do
 # not want to pull down all the caches as well.  
-drush ${DEPLOY_DRUSH_ALIAS} cache-clear all
+drush --root=/home/deploy/web/${PROJECT_NAME} cache-clear all
 
 # NB - We do not want to clear out the dev site cache as this deletes directories and this causes the svn 
 # revert command to fail.  By the end of this script the dev copy should be an exact copy of beta and that
@@ -110,9 +147,14 @@ echo "Make data dump..."
 #mysqldump -u ${DEV_MYSQL_USER} -p${DEV_MYSQL_PASS} ${DEV_MYSQL_DATABASE} > ${BACKUP_LOCATION}${DATE_TIME}_${DEV_MYSQL_DATABASE}.sql
 #tar --create --file=${BACKUP_LOCATION}${DATE_TIME}_${DEV_SITE_NAME}.tar ${DEV_DOCUMENT_ROOT}
 
-ssh deploy@localhost "mkdir -p ${DEPLOY_DATA_DUMP_DIRECTORY}${PROJECT_NAME}"
-ssh deploy@localhost "mysqldump -u ${DEPLOY_MYSQL_USER} -p${DEPLOY_MYSQL_PASS} ${DEPLOY_MYSQL_DATABASE} > ${DEPLOY_DATA_DUMP_DIRECTORY}${PROJECT_NAME}/${DATE_TIME}_${DEPLOY_MYSQL_DATABASE}.sql"
-ssh deploy@localhost "tar --create --file=${DEPLOY_DATA_DUMP_DIRECTORY}${PROJECT_NAME}/${DATE_TIME}_${DEPLOY_SITE_NAME}.tar ${DEPLOY_DOCUMENT_ROOT}"
+##ssh deploy@localhost "mkdir -p ${DEPLOY_DATA_DUMP_DIRECTORY}${PROJECT_NAME}"
+##ssh deploy@localhost "mysqldump -u ${DEPLOY_MYSQL_USER} -p${DEPLOY_MYSQL_PASS} ${DEPLOY_MYSQL_DATABASE} > ${DEPLOY_DATA_DUMP_DIRECTORY}${PROJECT_NAME}/${DATE_TIME}_${DEPLOY_MYSQL_DATABASE}.sql"
+##ssh deploy@localhost "tar --create --file=${DEPLOY_DATA_DUMP_DIRECTORY}${PROJECT_NAME}/${DATE_TIME}_${DEPLOY_SITE_NAME}.tar ${DEPLOY_DOCUMENT_ROOT}"
+
+sudo -u deploy mkdir -p /home/deploy/data_dumps
+sudo chmod 777 /home/deploy/data_dumps
+sudo mysqldump deploy${PROJECT_NAME} > /home/deploy/data_dumps/${PROJECT_NAME}_${DATE_TIME}.sql
+sudo -u deploy tar --create --file=/home/deploy/data_dumps/${PROJECT_NAME}_${DATE_TIME}.tar /home/deploy/web/${PROJECT_NAME}
 
 
 # -------------------------------------------------------------------------------------------------
@@ -129,7 +171,7 @@ echo "Bring site back online..."
 # drush @${BETA_SITE_NAME} vset --always-set site_offline 1
 
 # These commands work for Drupal 7.
-drush ${DEPLOY_DRUSH_ALIAS} vset maintenance_mode 0 --yes
+drush --root=/home/deploy/web/${PROJECT_NAME} vset maintenance_mode 0 --yes
 
 
 
