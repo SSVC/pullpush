@@ -130,6 +130,8 @@ if [ ! -e /home/livecopy/web/${PROJECT_NAME} ]
 then
 
 # Here we will add the vhost.
+: <<'QWERTY'
+
 
     case "${SERVER_TYPE}" in
 
@@ -214,6 +216,8 @@ then
             echo "Error - Invalid server type when adding a vhost."
             exit -1
     esac
+
+QWERTY
 
 ## Here we will create the database username and password.
 
@@ -388,7 +392,7 @@ else
 # -------------------------------------------------------------------------------------------------
     echo
     echo `date`
-    echo "Load database..."
+    echo "Load database over top of existing database..."
 # -------------------------------------------------------------------------------------------------
     sudo mysqladmin --force drop livecopy${PROJECT_NAME}
     sudo mysqladmin create livecopy${PROJECT_NAME}
@@ -409,13 +413,13 @@ else
 ##    ssh livecopy@localhost "tar -x --file=/home/livecopy/live_dump/${PROJECT_NAME}/${DATETIME_STAMP}_live_${PROJECT_NAME}.tar --directory=/home/livecopy/web/${PROJECT_NAME} --strip-components=1"
 
 
-    sudo -u livecopy chmod -R 777 /home/livecopy/web/${PROJECT_NAME}/sites/default
+    sudo chmod -R 777 /home/livecopy/web/${PROJECT_NAME}/sites/default
     sudo -u livecopy rm -rf /home/livecopy/web/${PROJECT_NAME}/*
 # This is used to remove the hidden (dot) files.
     sudo -u livecopy rm -rf /home/livecopy/web/${PROJECT_NAME}/.??*
-    sudo -u livecopy rmdir /home/livecopy/web/${PROJECT_NAME}
+##    sudo -u livecopy rmdir /home/livecopy/web/${PROJECT_NAME}
 
-    sudo -u livecopy tar -x --file=/home/livecopy/data_dumps/${PROJECT_NAME}_${DATADUMP_DATETIME_STAMP}.tar --directory=/home/livecopy/web/${PROJECT_NAME} --strip-components=1
+    sudo -u livecopy tar -x --file=/home/livecopy/data_dumps/${PROJECT_NAME}_${DATADUMP_DATETIME_STAMP}.tar --directory=/home/livecopy/web/${PROJECT_NAME} --strip-components=4
 
 
 # -------------------------------------------------------------------------------------------------
