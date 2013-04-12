@@ -468,7 +468,9 @@ case "${PROJECT_TYPE}" in
 	sudo -u beta svn propset svn:ignore settings.php /home/beta/web/${PROJECT_NAME}/sites/default
 ####sudo -u beta svn update /home/beta/web/${PROJECT_NAME}
 	sudo -u beta svn commit -m "Remove the settings.php file from SVN control to prevent incorrect database connections." /home/beta/web/${PROJECT_NAME}
-##sudo -u beta svn update /home/beta/web/${PROJECT_NAME}
+
+# An update is needed here to get the beta site revision number correct.  Not sure why.
+	sudo -u beta svn update /home/beta/web/${PROJECT_NAME}
 
 # Copy back in the settings file.
 	sudo -u beta cp /home/beta/settings.php.${PROJECT_NAME} /home/beta/web/${PROJECT_NAME}/sites/default/settings.php
@@ -495,7 +497,9 @@ case "${PROJECT_TYPE}" in
 	sudo -u beta svn propset svn:ignore settings.php /home/beta/web/${PROJECT_NAME}/sites/default
 ####sudo -u beta svn update /home/beta/web/${PROJECT_NAME}
 	sudo -u beta svn commit -m "Remove the settings.php file from SVN control to prevent incorrect database connections." /home/beta/web/${PROJECT_NAME}
-##sudo -u beta svn update /home/beta/web/${PROJECT_NAME}
+
+# An update is needed here to get the beta site revision number correct.  Not sure why.
+	sudo -u beta svn update /home/beta/web/${PROJECT_NAME}
 
 # Copy back in the settings file.
 	sudo -u beta cp /home/beta/settings.php.${PROJECT_NAME} /home/beta/web/${PROJECT_NAME}/sites/default/settings.php
@@ -534,10 +538,6 @@ case "${PROJECT_TYPE}" in
         exit -1
 esac
 
-
-
-
-
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
@@ -549,19 +549,19 @@ sudo mkdir -p /etc/pullpush/projects
 case "${PROJECT_TYPE}" in
 
     drupal7)
-	sudo sh -c "echo PROJECT_TYPE=drupal7\n >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo PROJECT_TYPE=drupal7 >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	;;
 
     drupal6)
-	sudo sh -c "echo PROJECT_TYPE=drupal6\n >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo PROJECT_TYPE=drupal6 >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	;;
 
     symfonymysql)
-	sudo sh -c "echo PROJECT_TYPE=symfonymysql\n >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo PROJECT_TYPE=symfonymysql >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	;;
 
     phpmysql)
-	sudo sh -c "echo PROJECT_TYPE=phpmysql\n >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo PROJECT_TYPE=phpmysql >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	;;
 
     *)

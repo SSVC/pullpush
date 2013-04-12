@@ -24,56 +24,6 @@ rm ${logfile}.pipe
 # -------------------------------------------------------------------------------------------------
 # Testing for arguments and configuration files.
 # -------------------------------------------------------------------------------------------------
-: <<'QWERTY'
-
-
-echo
-echo `date`
-echo "Testing for arguments..."
-if [ $1 ]
-then
-    echo "Project argument supplied OK as $1"
-    echo
-else
-    echo "ERROR - No project argument supplied"
-    exit -1
-fi
-
-if [ $2 ]
-then
-    echo "Datetime argument supplied OK as $2"
-    echo
-else
-    echo "ERROR - No datetime argument supplied"
-    exit -1
-fi
-
-# Check the variables file exists.
-if [ -e ~/.pullpush/${1} ]
-then
-        source ~/.pullpush/$1
-else
-        echo "ERROR - Configuration file $1 not found."
-        exit -1
-fi
-
-# Check the global settings file exists.
-if [ -e /home/pullpush/.pullpush/projects/${1} ]
-then
-        source /home/pullpush/.pullpush/projects/${1}
-else
-        echo "ERROR - Global configuration file $1 not found."
-        exit -1
-fi
-
-DATE_TIME=`date +%Y%m%d-%H%M%S`
-
-PROJECT_NAME=${1}
-DATETIME_STAMP=${2}
-QWERTY
-
-
-
 echo
 echo `date`
 echo "Testing for argument which should be the project name..."
@@ -519,5 +469,5 @@ fi
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Finished..."
+echo "Finished - the new site is at http://livecopy-${PROJECT_NAME}.${SERVER_FQDN}..."
 # -------------------------------------------------------------------------------------------------
