@@ -163,6 +163,16 @@ svn status /home/${USER}/projects/${PROJECT_NAME} | grep "^\!" | sed s/^\!// | s
 echo "Committing and deleting the files which have changed in dev..."
 svn commit -m "${DATE_TIME} - Committing added/changed/deleted data files from ${USER}-${PROJECT_NAME} into repository." /home/${USER}/projects/${PROJECT_NAME}
 
+# Here we will check if the commit ran OK.  This should pick up the return value from the svn command
+# but for now we will put in a visual safety check.  In fact this check would be a good idea anyway
+# as a safety check.
+read -p "Did the commit run OK (y/n)?"
+if [ $REPLY != "y" ]; then
+        echo "You will need to check why the files can not be commited before running this script again - Exiting..."
+        exit 1
+fi
+echo "Continuing with the script..."
+
 # Now we will run an update - the reason for this is so the revision number of dev local and
 # the repository will match and can therefore be tested before running the next commit from dev.
 # I.e. After running this update the revision numbers match.  When running the next test before 
