@@ -159,7 +159,7 @@ sudo mysqldump deploy${PROJECT_NAME} > /home/deploy/data_dumps/${PROJECT_NAME}_$
 sudo -u deploy tar --create --file=/home/deploy/data_dumps/${PROJECT_NAME}_${DATE_TIME}.tar /home/deploy/web/${PROJECT_NAME}
 
 # We will also create an arhive backup which will be used by the Drupal restore methods.
-sudo -u deploy drush --root=/home/deploy/web/${PROJECT_NAME} archive-dump --destination=/home/deploy/data_dumps/${PROJECT_NAME}_archive_${DATE_TIME}.tar
+sudo -u deploy drush --root=/home/deploy/web/${PROJECT_NAME} archive-dump --destination=/home/deploy/data_dumps/archive_${PROJECT_NAME}_${DATE_TIME}.tar
 
 
 # -------------------------------------------------------------------------------------------------
