@@ -168,11 +168,10 @@ svn commit -m "${DATE_TIME} - Committing added/changed/deleted data files from $
 # as a safety check.
 read -p "Did the commit run OK (y/n)?"
 if [ $REPLY != "y" ]; then
-        echo "Exiting..."
+        echo "You will need to check why the files can not be commited before running this script again - Exiting..."
         exit 1
 fi
 echo "Continuing with the script..."
-
 
 # Now we will run an update - the reason for this is so the revision number of dev local and
 # the repository will match and can therefore be tested before running the next commit from dev.
