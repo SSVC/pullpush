@@ -1,14 +1,27 @@
 #!/bin/bash
-
-# pullinitialsitefromsource
-# Pull initial site from source
-
-# ------------------------------------------------------------------------------------------
-# Script which will pull a vanilla site down from online sources and create an initial site.
-# ------------------------------------------------------------------------------------------
+#===================================================================================
+#
+# FILE: pullinitialsitefromsource
+#
+# USAGE: pullinitialsitefromsource [project type]
+#
+# DESCRIPTION: This will create an initial site which will be a vanilla copy of a
+# framework.  It will acheive this by pulling down any source code needed from 
+# repositories and creating any required databases.
+#
+# OPTIONS: see function ’usage’ below
+# NOTES: ---
+# AUTHOR: Kevin Bailey, mehner@fh-swf.de
+# COMPANY: Freeway Projects Limited
+#===================================================================================
 
 # -------------------------------------------------------------------------------------------------
-# Logging setup
+# Set up global variables used in the script.
+# -------------------------------------------------------------------------------------------------
+DATE_TIME=`date +%Y%m%d-%H%M%S`
+
+# -------------------------------------------------------------------------------------------------
+# Log output from the script.
 # -------------------------------------------------------------------------------------------------
 
 # These lines have been copied from 
@@ -29,7 +42,7 @@ rm ${logfile}.pipe
 
 echo
 echo `date`
-echo "Testing for arguments..."
+echo "Testing for arguments xxx..."
 if [ $1 ]
 then
     echo
@@ -49,6 +62,8 @@ else
     echo "ERROR - No initial site name supplied."
     exit -1
 fi
+
+exit
 
 # Todo
 # Here we need to check that the project type supplied is valid.
@@ -341,7 +356,7 @@ case "${PROJECT_TYPE}" in
 	echo ${USER}-initial-site-${INITIAL_SITE_NAME}.${SERVER_FQDN}
 
 	if [ "${APACHE_TYPE}" != "ITK" ]
-	    then
+	then
 	    echo
 	    echo `date`
 	    echo "Setting permissions for the files/ directory for non-ITK sites so the web server can write to it..."
@@ -371,7 +386,7 @@ case "${PROJECT_TYPE}" in
 	echo ${USER}-initial-site-${INITIAL_SITE_NAME}.${SERVER_FQDN}
 
 	if [ "${APACHE_TYPE}" != "ITK" ]
-	    then
+	then
 	    echo
 	    echo `date`
 	    echo "Setting permissions for the files/ directory for non-ITK sites so the web server can write to it..."
