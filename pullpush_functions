@@ -1,0 +1,21 @@
+#!/bin/bash
+#===================================================================================
+#
+# FILE: pullpush_functions
+#
+# DESCRIPTION: This file will contain functions used by the Pullpush scripts.
+#
+# AUTHOR: Kevin Bailey, kbailey@freewayprojects.com
+# COMPANY: Freeway Projects Limited
+#===================================================================================
+
+# Check the Pullpush configuration file exists.
+if [ -e /etc/pullpush/pullpush.conf ]
+then
+    source /etc/pullpush/pullpush.conf
+    exit 0
+else
+    echo
+    echo "ERROR - Pullpush configuration file not found."
+    exit 
+fi

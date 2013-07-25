@@ -16,22 +16,6 @@
 #===================================================================================
 
 # -------------------------------------------------------------------------------------------------
-# Set up global variables.
-#
-# We are going to explicitly set the script name variable.  Obviously the script name is available
-# as $0 - but this is not consistent and may or may not contain the path.  Also, this means we can
-# use the bash debugger without needing to handle the fact that $0 would contain something like
-# 'bashdb'.
-# -------------------------------------------------------------------------------------------------
-SCRIPT_NAME=pullinitialsitefromsource
-DATE_TIME=$(date +%Y%m%d-%H%M%S)
-
-# -------------------------------------------------------------------------------------------------
-# Set up the user to be able to run sudo commands - this will be revoked at the end of the script.
-# -------------------------------------------------------------------------------------------------
-sudo -v
-
-# -------------------------------------------------------------------------------------------------
 # Log all output from the script.
 # 
 # As we are going to be carrying out multiple steps and it is important we can see all the output
@@ -47,7 +31,7 @@ tmppipe=$(mktemp -u)
 mkfifo ${tmppipe}
 
 # ...then start a tee process which takes as its input the pipe - and output to the logfile (and 
-# standard output) and then push tee into a background process (subshell).
+# standard output) and then push the tee process into the background (subshell).
 tee < ${tmppipe} /var/log/pullpush/${DATE_TIME}_${USER}_${SCRIPT_NAME}.log &
 
 # Redirect both standard output and standard error to the pipe just created - these outputs
@@ -58,7 +42,29 @@ exec &> ${tmppipe}
 rm ${tmppipe}
 
 # -------------------------------------------------------------------------------------------------
-# Functions
+# Set up the user to be able to run sudo commands - this will be revoked at the end of the script.
+# -------------------------------------------------------------------------------------------------
+Echo "You will need to be able to authenticate a sudo session to run this script..."
+sudo -v
+
+# -------------------------------------------------------------------------------------------------
+# Set up global variables.
+#
+# We are going to explicitly set the script name variable.  Obviously the script name is available
+# as $0 - but this is not consistent and may or may not contain the path.  Also, this means we can
+# use the bash debugger without needing to handle the fact that $0 would contain something like
+# 'bashdb'.
+# -------------------------------------------------------------------------------------------------
+SCRIPT_NAME=pullinitialsitefromsource
+DATE_TIME=$(date +%Y%m%d-%H%M%S)
+
+# -------------------------------------------------------------------------------------------------
+# Import Pullpush functions.
+# -------------------------------------------------------------------------------------------------
+source ./pullpush_functions
+
+# -------------------------------------------------------------------------------------------------
+# Local functions
 #
 # Here we will define all the functions used by this script.
 # -------------------------------------------------------------------------------------------------
@@ -107,27 +113,39 @@ then
     exit 1
 fi
 
-# Check that the initial site name is valid and that the name has not been used before.
+# Check that the initial site name is valid.
 if [ ${#INITIAL_SITE_NAME} -gt 8 ]; then
-    echo "The insitial site name should be no longer than 8 characters."
+    echo "The initial site name should be no longer than 8 characters."
     usage
     exit 1
 fi
 
-
-
-
-
-#echo -n "Enter alphanumeric input: "
-#read input
-
-compressed="$(echo $INITIAL_SITE_NAME | sed -e 's/[^[:alnum:]]//g')"
-
+# Check that only alphanumeric characters are used for the initial site name.
+compressed="$(echo ${INITIAL_SITE_NAME} | sed -e 's/[^[:alnum:]]//g')"
 if [ "$compressed" != "${INITIAL_SITE_NAME}" ] ; then
     echo "The initial site should only contain alphanumeric characters."
     usage
     exit 1
 fi
+
+if [ -e /home/${USER}/initial_sites/${INITIAL_SITE_NAME} ]
+then
+    echo "The initial site name has been used already.  Either remove the site or choose a name which has not been used already."
+    usage
+    exit 1
+fi
+
+
+
+# Check the Pullpush configuration file exists.
+#if [ -e /etc/pullpush/pullpush.conf ]
+#then
+#    source /etc/pullpush/pullpush.conf
+#else
+#    echo
+#    echo "ERROR - Pullpush configuration file not found."
+#    exit 1
+#fi
 
 
 
@@ -136,57 +154,11 @@ echo "starting the script for project type :$PROJECT_TYPE and with an intial sit
 
 
 
-
 exit 0
 
 
 
-# -------------------------------------------------------------------------------------------------
-# We are going to bring in a parameter which will be used to pull in a file containing values for
-# variables - this is to prevent users accidentally using someone elses databases and web space.
-# -------------------------------------------------------------------------------------------------
 
-echo
-echo $(date)
-echo "Testing for arguments xxx..."
-if [ $1 ]
-then
-    echo
-    echo "Project type supplied OK as $1"
-else
-    echo
-    echo "ERROR - No project type supplied."
-    exit -1
-fi
-
-if [ $2 ]
-then
-    echo
-    echo "Initial site name supplied OK as $2"
-else
-    echo
-    echo "ERROR - No initial site name supplied."
-    exit -1
-fi
-
-exit
-
-# Todo
-# Here we need to check that the project type supplied is valid.
-
-# Todo
-# Here we need to check that the intial site name has not been used already and is 
-# valid.
-
-# Check the Pullpush configuration file exists.
-if [ -e /etc/pullpush/pullpush.conf ]
-then
-    source /etc/pullpush/pullpush.conf
-else
-    echo
-    echo "ERROR - Pullpush configuration file not found."
-    exit -1
-fi
 
 # Todo - Need to check if the initial site has been created already.
 
