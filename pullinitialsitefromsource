@@ -5,35 +5,141 @@
 #
 # USAGE: pullinitialsitefromsource [project type]
 #
-# DESCRIPTION: This will create an initial site which will be a vanilla copy of a
-# framework.  It will acheive this by pulling down any source code needed from 
+# DESCRIPTION: This will create an initial site which will be a vanilla copy from a
+# framework.  It will achieve this by pulling down any source code needed from 
 # repositories and creating any required databases.
 #
 # OPTIONS: see function ’usage’ below
 # NOTES: ---
-# AUTHOR: Kevin Bailey, mehner@fh-swf.de
+# AUTHOR: Kevin Bailey, kbailey@freewayprojects.com
 # COMPANY: Freeway Projects Limited
 #===================================================================================
 
 # -------------------------------------------------------------------------------------------------
-# Set up global variables used in the script.
+# Set up global variables.
+#
+# We are going to explicitly set the script name variable.  Obviously the script name is available
+# as $0 - but this is not consistent and may or may not contain the path.  Also, this means we can
+# use the bash debugger without needing to handle the fact that $0 would contain something like
+# 'bashdb'.
 # -------------------------------------------------------------------------------------------------
-DATE_TIME=`date +%Y%m%d-%H%M%S`
+SCRIPT_NAME=pullinitialsitefromsource
+DATE_TIME=$(date +%Y%m%d-%H%M%S)
 
 # -------------------------------------------------------------------------------------------------
-# Log output from the script.
+# Set up the user to be able to run sudo commands - this will be revoked at the end of the script.
+# -------------------------------------------------------------------------------------------------
+sudo -v
+
+# -------------------------------------------------------------------------------------------------
+# Log all output from the script.
+# 
+# As we are going to be carrying out multiple steps and it is important we can see all the output
+# to be able to diagnose problems.
 # -------------------------------------------------------------------------------------------------
 
-# These lines have been copied from 
-# http://stackoverflow.com/questions/3173131/redirect-copy-of-stdout-to-log-file-from-within-bash-script-itself
-# and will send the script output to a log file.
-mkdir -p ~/logs/pullpush
-DATE_TIME=`date +%Y%m%d-%H%M%S`
-logfile=~/logs/pullpush/pullinitialsitefromsource_${DATE_TIME}.log
-mkfifo ${logfile}.pipe
-tee < ${logfile}.pipe $logfile &
-exec &> ${logfile}.pipe
-rm ${logfile}.pipe
+# Create a place for the log files.
+sudo mkdir -p /var/log/pullpush
+sudo chmod 777 /var/log/pullpush
+
+# Create a pipe...
+tmppipe=$(mktemp -u)
+mkfifo ${tmppipe}
+
+# ...then start a tee process which takes as its input the pipe - and output to the logfile (and 
+# standard output) and then push tee into a background process (subshell).
+tee < ${tmppipe} /var/log/pullpush/${DATE_TIME}_${USER}_${SCRIPT_NAME}.log &
+
+# Redirect both standard output and standard error to the pipe just created - these outputs
+# will then be directed via the pipe to standard output (the current shell) and the log file.
+exec &> ${tmppipe}
+
+# This sets up the pipe to be removed - it will only be fully dropped when no process is using it.
+rm ${tmppipe}
+
+# -------------------------------------------------------------------------------------------------
+# Functions
+#
+# Here we will define all the functions used by this script.
+# -------------------------------------------------------------------------------------------------
+
+# Output a usage message - used when the parameters input are not correct.
+usage () {
+  echo "Usage: $SCRIPT_NAME -t [project type] -i [initial site name (1 to 8 alphanumeric characters)]"
+}
+
+# -------------------------------------------------------------------------------------------------
+# Testing parameters
+# -------------------------------------------------------------------------------------------------
+while getopts ":t:i:" opt; do
+  case $opt in
+    t)
+      PROJECT_TYPE=$OPTARG
+      ;;
+    i)
+      INITIAL_SITE_NAME=$OPTARG
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      usage
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+# Check both parameters have had values assigned.
+if [ -z $PROJECT_TYPE ] || [ -z INITIAL_SITE_NAME ]
+then
+    echo "The project type and the initial site name need to be set."
+    usage
+    exit 1
+fi
+
+# Check that the project type is valid.
+if [ $PROJECT_TYPE != "drupal7" ]
+then
+    echo "The currently supported project type is 'drupal7'."
+    exit 1
+fi
+
+# Check that the initial site name is valid and that the name has not been used before.
+if [ ${#INITIAL_SITE_NAME} -gt 8 ]; then
+    echo "The insitial site name should be no longer than 8 characters."
+    usage
+    exit 1
+fi
+
+
+
+
+
+#echo -n "Enter alphanumeric input: "
+#read input
+
+compressed="$(echo $INITIAL_SITE_NAME | sed -e 's/[^[:alnum:]]//g')"
+
+if [ "$compressed" != "${INITIAL_SITE_NAME}" ] ; then
+    echo "The initial site should only contain alphanumeric characters."
+    usage
+    exit 1
+fi
+
+
+
+echo "starting the script for project type :$PROJECT_TYPE and with an intial site name of ${INITIAL_SITE_NAME}"
+
+
+
+
+
+exit 0
+
+
 
 # -------------------------------------------------------------------------------------------------
 # We are going to bring in a parameter which will be used to pull in a file containing values for
@@ -41,7 +147,7 @@ rm ${logfile}.pipe
 # -------------------------------------------------------------------------------------------------
 
 echo
-echo `date`
+echo $(date)
 echo "Testing for arguments xxx..."
 if [ $1 ]
 then
