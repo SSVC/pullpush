@@ -37,7 +37,7 @@ __create_mysql_database_and_user_account () {
 
 ##	    mysqladmin --force drop ${DATABASE_NAME}
 	    mysqladmin create ${DATABASE_NAME}
-	    mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
+	    mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" 	    ${DATABASE_NAME}
             ;;
 
 	*)
@@ -45,3 +45,52 @@ __create_mysql_database_and_user_account () {
             exit -1
     esac
 }
+
+
+__set_up_vhost () {
+
+    VHOST_NAME=${1}
+    DOC_ROOT=${2}
+
+# -------------------------------------------------------------------------------------------------
+    echo
+    echo `date`
+    echo "Set up the vhost for the site..."
+# -------------------------------------------------------------------------------------------------
+    case "${SERVER_TYPE}" in
+
+	debian|ubuntu)
+	    echo
+	    echo `date`
+            echo "Set up vhost on ${SERVER_TYPE}."
+
+	# First we need to copy the relevant vhost template file.
+	    case ${PROJECT_TYPE} in
+		drupal6|drupal7)
+		    echo "Copy the vhost template..."
+		    sudo cp /usr/local/share/pullpush/vhost_drupal.template /etc/apache2/sites-available/${VHOST_NAME}
+                    ;;
+		*)
+		    echo "Error - Invalid project type."
+		    exit -1
+            esac
+
+	    # Edit the configuration file.  There may be a better way to do this.
+            sudo sed -i "s|documentroot|${DOC_ROOT}|g" /etc/apache2/sites-available/${VHOST_NAME}
+            sudo sed -i "s/username/${USER}/g" /etc/apache2/sites-available/${VHOST_NAME}
+            sudo sed -i "s/vhostname/${VHOST_NAME}/g" /etc/apache2/sites-available/${VHOST_NAME}
+            sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/sites-available/${VHOST_NAME}
+            sudo sed -i "s/serveradminemail/${SERVER_ADMIN_EMAIL}/g" /etc/apache2/sites-available/${VHOST_NAME}
+
+            sudo a2ensite ${VHOST_NAME}
+            sudo apache2ctl restart
+            ;;
+
+	*)
+            echo "Error - Invalid server type."
+            exit -1
+    esac
+
+}
+
+

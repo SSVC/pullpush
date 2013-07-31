@@ -1,6 +1,5 @@
 <VirtualHost *:80>
 
-#    ServerName username-initial-site-initialsitename.serverfqdn
     ServerName vhostname.serverfqdn
     ServerAdmin serveradminemail
 
@@ -23,6 +22,6 @@
 
     # Limit PHP scripts to accessing only certain direectories.
     # NB - This can be worked around with shell_exec etc but is a level of protection.
-    php_admin_value open_basedir /home/username/:/usr/share/php/:/tmp
+    php_admin_value open_basedir documentroot/:/usr/share/php/:/tmp
 
 </VirtualHost>
