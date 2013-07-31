@@ -10,12 +10,38 @@
 #===================================================================================
 
 # Check the Pullpush configuration file exists.
-if [ -e /etc/pullpush/pullpush.conf ]
-then
-    source /etc/pullpush/pullpush.conf
-    exit 0
-else
-    echo
-    echo "ERROR - Pullpush configuration file not found."
-    exit 
-fi
+__load_configuration_file () {
+
+    if [ -e /etc/pullpush/pullpush.conf ]
+    then
+	source /etc/pullpush/pullpush.conf
+	return 0
+    else
+	echo "ERROR - Pullpush configuration file not found."
+	return 1
+    fi
+}
+
+__create_mysql_database_and_user_account () {
+
+    DATABASE_NAME=${1}
+    DATABASE_USER=${2}
+    DATABASE_PASSWORD=${3}
+
+    case "${PROJECT_TYPE}" in
+	
+	drupal6|drupal7)
+            echo
+	    echo `date`
+	    echo "Creating a database for a ${PROJECT_TYPE} site..."
+
+##	    mysqladmin --force drop ${DATABASE_NAME}
+	    mysqladmin create ${DATABASE_NAME}
+	    mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
+            ;;
+
+	*)
+            echo "Error - Invalid project type."
+            exit -1
+    esac
+}

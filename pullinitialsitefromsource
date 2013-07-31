@@ -16,6 +16,17 @@
 #===================================================================================
 
 # -------------------------------------------------------------------------------------------------
+# Set up global variables.
+#
+# We are going to explicitly set the script name variable.  Obviously the script name is available
+# as $0 - but this is not consistent and may or may not contain the path.  Also, this means we can
+# use the bash debugger without needing to handle the fact that $0 would contain something like
+# 'bashdb'.
+# -------------------------------------------------------------------------------------------------
+SCRIPT_NAME=pullinitialsitefromsource
+DATE_TIME=$(date +%Y%m%d-%H%M%S)
+
+# -------------------------------------------------------------------------------------------------
 # Log all output from the script.
 # 
 # As we are going to be carrying out multiple steps and it is important we can see all the output
@@ -44,24 +55,12 @@ rm ${tmppipe}
 # -------------------------------------------------------------------------------------------------
 # Set up the user to be able to run sudo commands - this will be revoked at the end of the script.
 # -------------------------------------------------------------------------------------------------
-Echo "You will need to be able to authenticate a sudo session to run this script..."
 sudo -v
-
-# -------------------------------------------------------------------------------------------------
-# Set up global variables.
-#
-# We are going to explicitly set the script name variable.  Obviously the script name is available
-# as $0 - but this is not consistent and may or may not contain the path.  Also, this means we can
-# use the bash debugger without needing to handle the fact that $0 would contain something like
-# 'bashdb'.
-# -------------------------------------------------------------------------------------------------
-SCRIPT_NAME=pullinitialsitefromsource
-DATE_TIME=$(date +%Y%m%d-%H%M%S)
 
 # -------------------------------------------------------------------------------------------------
 # Import Pullpush functions.
 # -------------------------------------------------------------------------------------------------
-source ./pullpush_functions
+source /usr/local/share/pullpush/pullpush_functions
 
 # -------------------------------------------------------------------------------------------------
 # Local functions
@@ -71,7 +70,7 @@ source ./pullpush_functions
 
 # Output a usage message - used when the parameters input are not correct.
 usage () {
-  echo "Usage: $SCRIPT_NAME -t [project type] -i [initial site name (1 to 8 alphanumeric characters)]"
+  echo "Usage: $SCRIPT_NAME -t [project type] -i [initial site name (1 to 6 alphanumeric characters)]"
 }
 
 # -------------------------------------------------------------------------------------------------
@@ -99,7 +98,7 @@ while getopts ":t:i:" opt; do
 done
 
 # Check both parameters have had values assigned.
-if [ -z $PROJECT_TYPE ] || [ -z INITIAL_SITE_NAME ]
+if [ -z $PROJECT_TYPE ] || [ -z $INITIAL_SITE_NAME ]
 then
     echo "The project type and the initial site name need to be set."
     usage
@@ -107,15 +106,15 @@ then
 fi
 
 # Check that the project type is valid.
-if [ $PROJECT_TYPE != "drupal7" ]
+if [ $PROJECT_TYPE != "drupal7" ] && [ $PROJECT_TYPE != "drupal6" ] 
 then
-    echo "The currently supported project type is 'drupal7'."
+    echo "The currently supported project types are 'drupal7' and drupal6."
     exit 1
 fi
 
 # Check that the initial site name is valid.
-if [ ${#INITIAL_SITE_NAME} -gt 8 ]; then
-    echo "The initial site name should be no longer than 8 characters."
+if [ ${#INITIAL_SITE_NAME} -gt 6 ]; then
+    echo "The initial site name should be no longer than 6 characters."
     usage
     exit 1
 fi
@@ -135,100 +134,71 @@ then
     exit 1
 fi
 
+# Load the configuration file and check it was loaded OK.
+__load_configuration_file
+if [ $? -ne 0 ]
+then
+    echo "Configuration file was not loaded."
+fi
 
+echo "Project type supplied OK as ${PROJECT_TYPE}"
+echo "Initial site name supplied OK as ${INITIAL_SITE_NAME}"
 
-# Check the Pullpush configuration file exists.
-#if [ -e /etc/pullpush/pullpush.conf ]
-#then
-#    source /etc/pullpush/pullpush.conf
-#else
-#    echo
-#    echo "ERROR - Pullpush configuration file not found."
-#    exit 1
-#fi
+DATABASE_NAME=${USER}is${INITIAL_SITE_NAME}
+#DATABASE_USER=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
+DATABASE_USER=${USER}is${INITIAL_SITE_NAME}
+PASSWORD=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
 
-
-
-echo "starting the script for project type :$PROJECT_TYPE and with an intial site name of ${INITIAL_SITE_NAME}"
-
-
-
-
-exit 0
-
-
-
-
-
-# Todo - Need to check if the initial site has been created already.
-
-DATE_TIME=`date +%Y%m%d-%H%M%S`
-PROJECT_TYPE=${1}
-INITIAL_SITE_NAME=${2}
+__create_mysql_database_and_user_account ${USER}is${INITIAL_SITE_NAME} ${USER}is${INITIAL_SITE_NAME} ${PASSWORD} 
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Set up some initial variables and create the initial site directory..."
-# -------------------------------------------------------------------------------------------------
-
-# Should possibly use a better tool - but SLES does not have gpw or pwgen available.
-# NB - We need to generate a shortish username to log in to the database as MySQL
-# has a limit on database usernames of 16 characters.
-# NB - It would be good to put hyphens inbetween the parts of the database name but 
-# this causes problems with MySQL.
-DATABASE_NAME=${USER}initialsite${INITIAL_SITE_NAME}
-DATABASE_USER=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
-DATABASE_PASSWORD=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
-
-# Todo
-# Need to check that the database name or database username has not been used already.
-
-# We do this first to make sure the document root exists - otherwise the commands to restart Apache
-# will produce warnings.
-mkdir -p ~/initial_sites
-
-# -------------------------------------------------------------------------------------------------
-echo
-echo `date`
-echo "Download site files..."
+echo "Downloading site files..."
 # -------------------------------------------------------------------------------------------------
 case "${PROJECT_TYPE}" in
 
     drupal7)
 	echo
 	echo `date`
-	echo "Download a Drupal 7 site..."
-        drush dl drupal-7 --drupal-project-rename=${INITIAL_SITE_NAME} --destination=/home/${USER}/initial_sites
+	echo "Downloading a drupal7 site..."
+	mkdir -p ~/initial_sites/${INITIAL_SITE_NAME}
+#        drush dl drupal-7 --drupal-project-rename=${INITIAL_SITE_NAME} --destination=/home/${USER}/initial_sites
+        drush dl drupal-7 --drupal-project-rename=web --destination=/home/${USER}/initial_sites/${INITIAL_SITE_NAME}
         ;;
     
     drupal6)
 	echo
 	echo `date`
-	echo "Download a Drupal 6 site..."
-        drush dl drupal-6 --drupal-project-rename=${INITIAL_SITE_NAME} --destination=/home/${USER}/initial_sites
+	echo "Downloading a drupal6 site..."
+	mkdir -p ~/initial_sites/${INITIAL_SITE_NAME}
+        drush dl drupal-6 --drupal-project-rename=web --destination=/home/${USER}/initial_sites/${INITIAL_SITE_NAME}
         ;;
 
-    symfonymysql)
-	echo
-	echo `date`
-	echo "Download the Symfony framework..."
-	composer create-project symfony/framework-standard-edition /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/ ${SYMFONY_VERSION}
-	composer --working-dir=/home/${USER}/initial_sites/${INITIAL_SITE_NAME} update
-        ;;
+##    symfonymysql)
+##	echo
+##	echo `date`
+##	echo "Download the Symfony framework..."
+##	composer create-project symfony/framework-standard-edition /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/ ${SYMFONY_VERSION}
+##	composer --working-dir=/home/${USER}/initial_sites/${INITIAL_SITE_NAME} update
+##      ;;
     
-    phpmysql)
-	echo
-	echo `date`
-	echo "Set up a basic PHP page..."
-	mkdir -p /home/${USER}/initial_sites/${INITIAL_SITE_NAME}
-	cp /usr/local/share/pullpush/index.php.template /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/index.php
-        ;;
+##    phpmysql)
+##	echo
+##	echo `date`
+##	echo "Set up a basic PHP page..."
+##	mkdir -p /home/${USER}/initial_sites/${INITIAL_SITE_NAME}
+##	cp /usr/local/share/pullpush/index.php.template /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/index.php
+##        ;;
     
     *)
         echo "Error - Invalid project type."
         exit -1
 esac
+
+exit 0
+
+
 
 # -------------------------------------------------------------------------------------------------
 echo
