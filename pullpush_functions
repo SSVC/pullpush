@@ -52,22 +52,13 @@ __set_up_vhost () {
     VHOST_NAME=${1}
     DOC_ROOT=${2}
 
-# -------------------------------------------------------------------------------------------------
-    echo
-    echo `date`
-    echo "Set up the vhost for the site..."
-# -------------------------------------------------------------------------------------------------
     case "${SERVER_TYPE}" in
 
 	debian|ubuntu)
-	    echo
-	    echo `date`
-            echo "Set up vhost on ${SERVER_TYPE}."
 
 	# First we need to copy the relevant vhost template file.
 	    case ${PROJECT_TYPE} in
 		drupal6|drupal7)
-		    echo "Copy the vhost template..."
 		    sudo cp /usr/local/share/pullpush/vhost_drupal.template /etc/apache2/sites-available/${VHOST_NAME}
                     ;;
 		*)

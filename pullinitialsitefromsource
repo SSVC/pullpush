@@ -141,11 +141,7 @@ then
     echo "Configuration file was not loaded."
 fi
 
-echo "Project type supplied OK as ${PROJECT_TYPE}"
-echo "Initial site name supplied OK as ${INITIAL_SITE_NAME}"
-
 DATABASE_NAME=${USER}is${INITIAL_SITE_NAME}
-#DATABASE_USER=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
 DATABASE_USER=${USER}is${INITIAL_SITE_NAME}
 PASSWORD=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
 
@@ -163,7 +159,6 @@ case "${PROJECT_TYPE}" in
 	echo `date`
 	echo "Downloading a drupal7 site..."
 	mkdir -p ~/initial_sites/${INITIAL_SITE_NAME}
-#        drush dl drupal-7 --drupal-project-rename=${INITIAL_SITE_NAME} --destination=/home/${USER}/initial_sites
         drush dl drupal-7 --drupal-project-rename=web --destination=/home/${USER}/initial_sites/${INITIAL_SITE_NAME}
         ;;
     
@@ -175,22 +170,6 @@ case "${PROJECT_TYPE}" in
         drush dl drupal-6 --drupal-project-rename=web --destination=/home/${USER}/initial_sites/${INITIAL_SITE_NAME}
         ;;
 
-##    symfonymysql)
-##	echo
-##	echo `date`
-##	echo "Download the Symfony framework..."
-##	composer create-project symfony/framework-standard-edition /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/ ${SYMFONY_VERSION}
-##	composer --working-dir=/home/${USER}/initial_sites/${INITIAL_SITE_NAME} update
-##      ;;
-    
-##    phpmysql)
-##	echo
-##	echo `date`
-##	echo "Set up a basic PHP page..."
-##	mkdir -p /home/${USER}/initial_sites/${INITIAL_SITE_NAME}
-##	cp /usr/local/share/pullpush/index.php.template /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/index.php
-##        ;;
-    
     *)
         echo "Error - Invalid project type."
         exit -1
@@ -216,10 +195,6 @@ case "${PROJECT_TYPE}" in
 	echo `date`
         echo "Carrying out a site install on the Drupal 7 site..."
 
-##	cd ~/initial_sites/${INITIAL_SITE_NAME}
-
-        # For D6 the profile should be 'default' and under D7 the profile should be 'standard'.
-##	drush site-install standard --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME} --yes --root=/home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web
 	drush site-install --db-url=mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME} --yes --root=/home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web
 
         # Now we've allowed the user to set up the Drupal site we're going to reduce the user
