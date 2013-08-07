@@ -130,7 +130,7 @@ fi
 
 if [ -e /home/beta/projects/${PROJECT_NAME} ]
 then
-    echo "The project name has been used already.  Either remove the site or choose a name which has not been used already."
+    echo "The project name has been used already - choose a different project name."
     usage
     exit 1
 fi
@@ -151,11 +151,11 @@ then
     echo "Configuration file was not loaded."
 fi
 
-echo "all tests finished."
+echo "All tests completed OK."
 
-echo $PROJECT_TYPE
-echo $INITIAL_SITE_NAME
-echo $PROJECT_NAME
+echo "Project name: ${PROJECT_TYPE}"
+echo "Initial site name: ${INITIAL_SITE_NAME}"
+echo "Project name: ${PROJECT_NAME}"
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -189,6 +189,8 @@ sudo svnadmin create /var/lib/svn/${PROJECT_NAME}
 # We will set the ownership to www-data as we will primarily be using HTTP to access the archive.
 sudo chown -R www-data:www-data /var/lib/svn/${PROJECT_NAME}
 
+# Here we will put a dump of the database into the code repository.  This means that the site can
+# be rebuilt from an export from the repository if needed.
 cp /home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}_${DATE_TIME}.sql /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web/${USER}is${INITIAL_SITE_NAME}_${DATE_TIME}.sql
 
 svn import /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web http://localhost/svn/${PROJECT_NAME} -m "Initial import."
@@ -196,7 +198,7 @@ svn import /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web http://localhost
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Export the files from SVN ..."
+echo "Checkout the files from SVN ..."
 # -------------------------------------------------------------------------------------------------
 
 case "${PROJECT_TYPE}" in
@@ -208,14 +210,25 @@ case "${PROJECT_TYPE}" in
 	sudo -u beta -i svn delete --keep-local /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php
 	sudo -u beta -i svn propset svn:ignore settings.php /home/beta/projects/${PROJECT_NAME}/web/sites/default
 	sudo -u beta -i "svn commit -m \"Remove the settings.php file from SVN control to prevent incorrect database connections.\" /home/beta/projects/${PROJECT_NAME}/web"
-	;;
+
+	if [ "${WEB_SERVER_TYPE}" = "apache2prefork" ]
+	then
+	    echo
+	    echo `date`
+	    echo "Add the www-data user to the beta group so that the web server can write to the files/ directory..."
+	    sudo adduser --quiet www-data beta
+
+	    echo
+	    echo `date`
+	    echo "Setting permissions for the files/ directory so the web server can write to it..."
+	    sudo chmod -R 775 /home/beta/projects/${PROJECT_NAME}/web/sites/default/files
+	fi
+        ;;
 
     *)
         echo "Error - Invalid project type."
         exit -1
 esac
-
-
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -229,7 +242,7 @@ case "${PROJECT_TYPE}" in
 
 	# We will cpoy the file before changing it as changing it in place gets complicated when trying to excape the sudo command.
 	cp /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/${USER}/settings.php.betapr${PROJECT_NAME}
-	cat <<EOFSETTINGS >> /home/kbailey/settings.php.betapr${PROJECT_NAME}
+	cat <<EOFSETTINGS >> /home/${USER}/settings.php.betapr${PROJECT_NAME}
 
 \$databases = array (
   'default' => 
@@ -257,7 +270,8 @@ EOFSETTINGS
 
 	# We will cpoy the file before changing it as changing it in place gets complicated when trying to excape the sudo command.
 	cp /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/${USER}/settings.php.betapr${PROJECT_NAME}
-	echo "\$db_url = 'mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}'" >> ~/settings.php.betaprqwertx
+##	echo "\$db_url = 'mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}'" >> /home/${USER}/settings.php.betapr${PROJECT_NAME}
+	echo "\$db_url = 'mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}';" >> /home/${USER}/settings.php.betapr${PROJECT_NAME}
 	sudo -u beta -i cp /home/${USER}/settings.php.betapr${PROJECT_NAME} /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php
 	rm /home/${USER}/settings.php.betapr${PROJECT_NAME}
 	;;
@@ -297,13 +311,22 @@ echo "Set up the beta vhost..."
 # -------------------------------------------------------------------------------------------------
 
 # If the projects directory does not exist yet then we need to create it.
-if [ ! -e /home/beta/projects ]
-then
-    sudo mkdir /home/beta/projects
-    sudo chown beta:beta /home/beta/projects
-fi
+## NB - this should have been created already.
+##if [ ! -e /home/beta/projects ]
+##then
+##    sudo mkdir /home/beta/projects
+##    sudo chown beta:beta /home/beta/projects
+##fi
 
 __set_up_vhost beta-pr-${PROJECT_NAME} /home/beta/projects/${PROJECT_NAME}/web
+
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Removing sudo permissions..."
+# -------------------------------------------------------------------------------------------------
+sudo -k
 
 # -------------------------------------------------------------------------------------------------
 echo

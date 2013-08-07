@@ -141,6 +141,16 @@ then
     echo "Configuration file was not loaded."
 fi
 
+echo "All tests completed OK."
+
+echo "Project type: ${PROJECT_TYPE}"
+echo "Initial site name: ${INITIAL_SITE_NAME}"
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Creating the database and database user..."
+# -------------------------------------------------------------------------------------------------
 DATABASE_NAME=${USER}is${INITIAL_SITE_NAME}
 DATABASE_USER=${USER}is${INITIAL_SITE_NAME}
 PASSWORD=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
@@ -208,7 +218,7 @@ case "${PROJECT_TYPE}" in
 	    echo
 	    echo `date`
 	    echo "Add the www-data user to the developers group so that the web server can write to the files/ directory..."
-	    sudo adduser www-data ${USER}
+	    sudo adduser --quiet www-data ${USER}
 
 	    echo
 	    echo `date`

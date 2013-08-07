@@ -31,9 +31,6 @@ __create_mysql_database_and_user_account () {
     case "${PROJECT_TYPE}" in
 	
 	drupal6|drupal7)
-            echo
-	    echo `date`
-	    echo "Creating a database for a ${PROJECT_TYPE} site..."
 
 ##	    mysqladmin --force drop ${DATABASE_NAME}
 	    mysqladmin create ${DATABASE_NAME}
