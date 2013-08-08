@@ -1,68 +1,138 @@
 #!/bin/bash
-
-
-
-
-
-# pushdevtobeta
-# Push dev to beta
-
-# -------------------------------------------------------------------------------------------------
-# Script which will copy the dev site to the beta site.
-# -------------------------------------------------------------------------------------------------
-
-# -------------------------------------------------------------------------------------------------
-# Logging setup
-# -------------------------------------------------------------------------------------------------
-
-# These lines have been copied from http://stackoverflow.com/questions/3173131/redirect-copy-of-stdout-to-log-file-from-within-bash-script-itself
-# and will send the script output to a log file.
-mkdir -p ~/logs/pullpush
-DATE_TIME=`date +%Y%m%d-%H%M%S`
-logfile=~/logs/pullpush/pushdevtobeta_${DATE_TIME}.log
-mkfifo ${logfile}.pipe
-tee < ${logfile}.pipe $logfile &
-exec &> ${logfile}.pipe
-rm ${logfile}.pipe
+#===================================================================================
+#
+# FILE: pullinitialsitefromsource
+#
+# USAGE: pullinitialsitefromsource [project type]
+#
+# DESCRIPTION: This will create an initial site which will be a vanilla copy from a
+# framework.  It will achieve this by pulling down any source code needed from 
+# repositories and creating any required databases.
+#
+# OPTIONS: see function ’usage’ below
+# NOTES: ---
+# AUTHOR: Kevin Bailey, kbailey@freewayprojects.com
+# COMPANY: Freeway Projects Limited
+#===================================================================================
 
 # -------------------------------------------------------------------------------------------------
-# Check the parameter and bring in the configuration files.
+# Set up global variables.
+#
+# We are going to explicitly set the script name variable.  Obviously the script name is available
+# as $0 - but this is not consistent and may or may not contain the path.  Also, this means we can
+# use the bash debugger without needing to handle the fact that $0 would contain something like
+# 'bashdb'.
+# -------------------------------------------------------------------------------------------------
+SCRIPT_NAME=pushdevtobeta
+DATE_TIME=$(date +%Y%m%d-%H%M%S)
+
+# -------------------------------------------------------------------------------------------------
+# Set up the user to be able to run sudo commands - this will be revoked at the end of the script.
+# -------------------------------------------------------------------------------------------------
+sudo -v
+
+# -------------------------------------------------------------------------------------------------
+# Log all output from the script.
+# 
+# As we are going to be carrying out multiple steps and it is important we can see all the output
+# to be able to diagnose problems.
 # -------------------------------------------------------------------------------------------------
 
-echo
-echo `date`
-echo "Testing for argument which should be the project name..."
-if [ $1 ]
+# Create a place for the log files.
+sudo mkdir -p /var/log/pullpush
+sudo chmod 777 /var/log/pullpush
+
+# Create a pipe...
+tmppipe=$(mktemp -u)
+mkfifo ${tmppipe}
+
+# ...then start a tee process which takes as its input the pipe - and output to the logfile (and 
+# standard output) and then push the tee process into the background (subshell).
+tee < ${tmppipe} /var/log/pullpush/${DATE_TIME}_${USER}_${SCRIPT_NAME}.log &
+
+# Redirect both standard output and standard error to the pipe just created - these outputs
+# will then be directed via the pipe to standard output (the current shell) and the log file.
+exec &> ${tmppipe}
+
+# This sets up the pipe to be removed - it will only be fully dropped when no process is using it.
+rm ${tmppipe}
+
+# -------------------------------------------------------------------------------------------------
+# Import Pullpush functions.
+# -------------------------------------------------------------------------------------------------
+source /usr/local/share/pullpush/pullpush_functions
+
+# -------------------------------------------------------------------------------------------------
+# Local functions
+#
+# Here we will define all the functions used by this script.
+# -------------------------------------------------------------------------------------------------
+
+# Output a usage message - used when the parameters input are not correct.
+usage () {
+  echo "Usage: $SCRIPT_NAME -p [project name]"
+}
+
+# -------------------------------------------------------------------------------------------------
+# Testing parameters
+# -------------------------------------------------------------------------------------------------
+while getopts ":p:" opt; do
+  case $opt in
+    p)
+      PROJECT_NAME=$OPTARG
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      usage
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+# Check the parameter has had a value assigned.
+if [ -z $PROJECT_NAME ]
 then
-    echo "Argument supplied OK as $1"
-    echo
-else
-    echo "ERROR - No argument supplied"
-    exit -1
+    echo "The project name needs to be set."
+    usage
+    exit 1
 fi
 
-# Set up variables used through this script.
-PROJECT_NAME=${1}
-DATE_TIME=`date +%Y%m%d-%H%M%S`
-
-# Check the Pullpush configuration file exists.
-if [ -e /etc/pullpush/pullpush.conf ]
+# Check the project exists.
+if [ ! -e /home/beta/projects/${PROJECT_NAME}/web ]
 then
-    source /etc/pullpush/pullpush.conf
-else
-    echo
-    echo "ERROR - Pullpush configuration file not found."
-    exit -1
+    echo "The project does not appear to exist."
+    usage
+    exit 1
 fi
 
-# Check the project settings file exists.
+# Load the project settings file or display an error if it does not exist.
 if [ -e /etc/pullpush/projects/${PROJECT_NAME}.conf ]
 then
     source /etc/pullpush/projects/${PROJECT_NAME}.conf
 else
-    echo "ERROR - The global configuration file /etc/pullpush/projects/${PROJECT_NAME}.conf not found."
-    exit -1
+    echo "ERROR - The project settings file /etc/pullpush/projects/${PROJECT_NAME}.conf not found."
+    exit 1
 fi
+
+# Load the configuration file and check it was loaded OK.
+__load_configuration_file
+
+if [ $? -ne 0 ]
+then
+    echo "Configuration file was not loaded."
+fi
+
+echo "All tests completed OK."
+echo "Project name: ${PROJECT_NAME}"
+
+
+
+
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -80,6 +150,7 @@ echo "Take sites offline..."
 # These commands work for Drupal 7.
 ##drush @${DEV_SITE_NAME} vset maintenance_mode 1 --yes
 ##drush @${BETA_SITE_NAME} vset maintenance_mode 1 --yes
+
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -99,18 +170,23 @@ echo "Clearing out the caches on the sites to trim the database and files/ befor
 ##drush @${DEV_SITE_NAME} cache-clear all
 ##drush @${BETA_SITE_NAME} cache-clear all
 
-drush --root=/home/${USER}/projects/${PROJECT_NAME} cache-clear all
-drush --root=/home/beta/web/${PROJECT_NAME} cache-clear all
+##drush --root=/home/${USER}/projects/${PROJECT_NAME} cache-clear all
+##drush --root=/home/beta/web/${PROJECT_NAME} cache-clear all
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Make backup copy of the dev site..."
+echo "Make backup copy of the dev site database to reload later into beta..."
 # -------------------------------------------------------------------------------------------------
 
 mkdir -p /home/${USER}/backups/dev_sites
-sudo mysqldump ${USER}${PROJECT_NAME} > /home/${USER}/backups/dev_sites/${PROJECT_NAME}_${DATE_TIME}.sql
-tar --create --file=/home/${USER}/backups/dev_sites/${PROJECT_NAME}_${DATE_TIME}.tar /home/${USER}/projects/${PROJECT_NAME}
+##mysqldump ${USER}${PROJECT_NAME} > /home/${USER}/backups/dev_sites/${PROJECT_NAME}_${DATE_TIME}.sql
+mysqldump ${USER}pr${PROJECT_NAME} > /home/${USER}/backups/dev_sites/${USER}pr${PROJECT_NAME}.sql
+
+## We are not going to back up the files as this could get too large and take too long.  Daily 
+# server backups should be used if needed.
+##tar --create --file=/home/${USER}/backups/dev_sites/${PROJECT_NAME}_${DATE_TIME}.tar /home/${USER}/projects/${PROJECT_NAME}
+##tar --create --file=/home/${USER}/backups/dev_sites/${PROJECT_NAME}.tar /home/${USER}/projects/${PROJECT_NAME}/web
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -120,9 +196,12 @@ echo "Make backup copy of the beta site..."
 ##mysqldump -u ${BETA_MYSQL_USER} -p${BETA_MYSQL_PASS} ${BETA_MYSQL_DATABASE} > ${BACKUP_LOCATION}${DATE_TIME}_${BETA_MYSQL_DATABASE}.sql
 ##tar --create --file=${BACKUP_LOCATION}${DATE_TIME}_${BETA_SITE_NAME}.tar ${BETA_DOCUMENT_ROOT}
 
-mkdir -p /home/${USER}/backups/beta_sites
-sudo mysqldump beta${PROJECT_NAME} > /home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.sql
-sudo tar --create --file=/home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.tar /home/beta/web/${PROJECT_NAME}
+
+## We are not going to backup the beta site due to time and space considerations.  When pulling 
+# from beta to dev there is a complete snapshot made including a database dump.
+##mkdir -p /home/${USER}/backups/beta_sites
+##sudo mysqldump beta${PROJECT_NAME} > /home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.sql
+##sudo tar --create --file=/home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.tar /home/beta/web/${PROJECT_NAME}
 
 
 # -------------------------------------------------------------------------------------------------
@@ -132,14 +211,12 @@ echo "Check local version of the code matches the current SVN version - if it do
 # -------------------------------------------------------------------------------------------------
 
 # Now checking that the revision number of dev's local svn copy matches the repository.  If they don't match then the repository must have been 
-# updated by another process. 
-# NB - This shouldn't have happened as this script is supposed to run after the script has been run to copy the beta copy over dev - and so the
+# updated by another process or by another developer pushing up to beta. 
+# NB - This shouldn't have happened as this script is supposed to run after the script has been run to pull the dev from beta - and so the
 # revision numbers should match.
 # We would need to see where that update come from and what (if any) database changes were made.
-# file changes to SVN.
 
-dev_local_revision=$(svn info /home/${USER}/projects/${PROJECT_NAME} | grep '^Revision:' | sed s/^Revision:[[:space:]]*// )
-
+dev_local_revision=$(svn info /home/${USER}/projects/${PROJECT_NAME}/web | grep '^Revision:' | sed s/^Revision:[[:space:]]*// )
 remote_revision=$(svn info http://localhost/svn/${PROJECT_NAME} | grep '^Revision:' | awk '{print $2}')
 
 echo "dev_local_revision:${dev_local_revision}"
@@ -148,7 +225,7 @@ echo "remote_revision:${remote_revision}"
 if [ "$dev_local_revision" != "$remote_revision" ]
 then
     echo "The revision number of the local copy does not match the remote respository version - this needs to be looked into - someone/some process has updated the repository - also check the database."
-    exit 0
+    exit 1
 fi
 
 # -------------------------------------------------------------------------------------------------
@@ -156,16 +233,14 @@ echo
 echo `date`
 echo "Add/Delete locally added and deleted files..."
 # -------------------------------------------------------------------------------------------------
-
-
 echo "Adding all new files to svn control list..."
-svn status /home/${USER}/projects/${PROJECT_NAME} | grep "^?" | sed s/^?// | sed s/[[:space:]]*// | xargs -i svn add "{}" 
+svn status /home/${USER}/projects/${PROJECT_NAME}/web | grep "^?" | sed s/^?// | sed s/[[:space:]]*// | xargs -i svn add "{}" 
 
 echo "If files have been deleted then SVN needs to mark them for deletion..."
-svn status /home/${USER}/projects/${PROJECT_NAME} | grep "^\!" | sed s/^\!// | sed s/[[:space:]]*// | xargs -i svn delete "{}" 
+svn status /home/${USER}/projects/${PROJECT_NAME}/web | grep "^\!" | sed s/^\!// | sed s/[[:space:]]*// | xargs -i svn delete "{}" 
 
 echo "Committing and deleting the files which have changed in dev..."
-svn commit -m "${DATE_TIME} - Committing added/changed/deleted data files from ${USER}-${PROJECT_NAME} into repository." /home/${USER}/projects/${PROJECT_NAME}
+svn commit -m "${DATE_TIME} - Committing added/changed/deleted data files from ${USER}-${PROJECT_NAME} into repository." /home/${USER}/projects/${PROJECT_NAME}/web
 
 # Here we will check if the commit ran OK.  This should pick up the return value from the svn command
 # but for now we will put in a visual safety check.  In fact this check would be a good idea anyway
@@ -183,7 +258,7 @@ echo "Continuing with the script..."
 # committing the dev files changes we can check the revision numbers and if they don't match then 
 # the repository must have been updated by another process.  This would then need to be investigated.
 echo "SVN update the local dev copy to get the revision number to match the repository revision..."
-svn update /home/${USER}/projects/${PROJECT_NAME}
+svn update /home/${USER}/projects/${PROJECT_NAME}/web
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -192,7 +267,26 @@ echo "SVN update beta site files from SVN..."
 # -------------------------------------------------------------------------------------------------
 
 ##ssh beta@localhost "svn update /home/beta/web/${PROJECT_NAME}"
-sudo -u beta sh -c "svn update /home/beta/web/${PROJECT_NAME}"
+sudo -u beta -i "svn update /home/beta/projects/${PROJECT_NAME}/web"
+
+# NB Now we need to chmod permissions on the files/ directory to enable the web server to manipulate
+# the files which have just been pulled out from SVN.
+if [ "${WEB_SERVER_TYPE}" = "apache2prefork" ]
+then
+    echo
+    echo `date`
+    echo "Add the www-data user to the beta group so that the web server can write to the files/ directory..."
+    sudo adduser --quiet www-data beta
+
+    echo "Add the beta user to the www-data so the beta user can work with files with SVN etc..."
+    sudo adduser --quiet beta www-data
+
+    echo
+    echo `date`
+    echo "Setting permissions for the files/ directory so the web server can write to it..."
+    sudo chmod -R 775 /home/beta/projects/${PROJECT_NAME}/web/sites/default/files
+fi
+
 
 # NB Now we need to chmod permissions on the files/ directory to enable the web server to manipulate
 # these files.
@@ -209,11 +303,9 @@ echo "Copy database from dev to beta..."
 ##rm ${BACKUP_LOCATION}sql_sync_dump.sql
 ##drush sql-sync @${DEV_SITE_NAME} @${BETA_SITE_NAME} --no-cache --source-dump=${BACKUP_LOCATION}sql_sync_dump.sql
 
-    sudo mysqladmin --force drop beta${PROJECT_NAME}
-    sudo mysqladmin create beta${PROJECT_NAME}
-
-    sudo mysql beta${PROJECT_NAME} < /home/${USER}/backups/dev_sites/${PROJECT_NAME}_${DATE_TIME}.sql
-
+mysqladmin --force drop betapr${PROJECT_NAME}
+mysqladmin create betapr${PROJECT_NAME}
+mysql betapr${PROJECT_NAME} < /home/${USER}/backups/dev_sites/${USER}pr${PROJECT_NAME}.sql
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -223,8 +315,8 @@ echo "Here we will clear out the caches again - this is needed by some modules s
 ##drush @${DEV_SITE_NAME} cache-clear all
 ##drush @${BETA_SITE_NAME} cache-clear all
 
-drush --root=/home/${USER}/projects/${PROJECT_NAME} cache-clear all
-drush --root=/home/beta/web/${PROJECT_NAME} cache-clear all
+###drush --root=/home/${USER}/projects/${PROJECT_NAME} cache-clear all
+###drush --root=/home/beta/web/${PROJECT_NAME} cache-clear all
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -247,4 +339,4 @@ echo `date`
 echo "Finished..."
 # -------------------------------------------------------------------------------------------------
 
-
+exit 0

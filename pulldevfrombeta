@@ -149,6 +149,9 @@ check_beta_files_into_svn () {
     # I.e. After running this update the revision numbers match.  When running the next test before 
     # committing the beta files/ changes we can check the revision numbers and if they don't match then 
     # the repository must have been updated by another process.  This would then need to be investigated.
+
+    # With SVN the local revision number is not updated after a commit - this is need by Pullpush as
+    # checks are carried out later.
     echo "SVN update the local beta copy to get the revision number to match the repository revision..."
     ##ssh beta@localhost "svn update ${BETA_DOCUMENT_ROOT}"
     sudo -u beta -i "svn update /home/beta/projects/${PROJECT_NAME}/web"
@@ -182,7 +185,7 @@ while getopts ":p:" opt; do
     esac
 done
 
-# Check all parameters have had values assigned.
+# Check the parameter has had a value assigned.
 if [ -z $PROJECT_NAME ]
 then
     echo "The project name needs to be set."
@@ -267,6 +270,9 @@ then
 	echo `date`
 	echo "Add the www-data user to the developers group so that the web server can write to the files/ directory..."
 	sudo adduser --quiet www-data ${USER}
+
+	echo "Adding the dev user to the www-data group so that the dev user can manipulate the files with SVN..."
+	sudo adduser --quiet ${USER} www-data
 
 	echo
 	echo `date`
@@ -361,8 +367,6 @@ else
 	exit 0
     fi
 
-    #####  HERE HERE HERE - check in the latest beta files - if they are not already checked in.
-
 
     # -------------------------------------------------------------------------------------------------
     echo
@@ -382,6 +386,9 @@ else
 	echo `date`
 	echo "Add the www-data user to the developers group so that the web server can write to the files/ directory..."
 	sudo adduser --quiet www-data ${USER}
+
+	echo "Adding the dev user to the www-data group so that the dev user can manipulate the files with SVN..."
+	sudo adduser --quiet ${USER} www-data
 
 	echo
 	echo `date`

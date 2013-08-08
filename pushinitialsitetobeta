@@ -211,12 +211,19 @@ case "${PROJECT_TYPE}" in
 	sudo -u beta -i svn propset svn:ignore settings.php /home/beta/projects/${PROJECT_NAME}/web/sites/default
 	sudo -u beta -i "svn commit -m \"Remove the settings.php file from SVN control to prevent incorrect database connections.\" /home/beta/projects/${PROJECT_NAME}/web"
 
+	# Here we need to run update to get the local revision number to match the new repository 
+	# revision number.  This is used in checks later.
+	sudo -u beta -i "svn update /home/beta/projects/${PROJECT_NAME}/web"
+
 	if [ "${WEB_SERVER_TYPE}" = "apache2prefork" ]
 	then
 	    echo
 	    echo `date`
 	    echo "Add the www-data user to the beta group so that the web server can write to the files/ directory..."
 	    sudo adduser --quiet www-data beta
+
+	    echo "Adding the beta user to the www-data group so that the beta user can manipulate the files with SVN..."
+	    sudo adduser --quiet beta www-data
 
 	    echo
 	    echo `date`
