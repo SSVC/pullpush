@@ -230,14 +230,21 @@ echo "Check local version of the code matches the current SVN version - if it do
 dev_local_revision=$(svn info /home/${USER}/projects/${PROJECT_NAME}/web | grep '^Revision:' | sed s/^Revision:[[:space:]]*// )
 remote_revision=$(svn info http://localhost/svn/${PROJECT_NAME} | grep '^Revision:' | awk '{print $2}')
 
-echo "dev_local_revision:${dev_local_revision}"
-echo "remote_revision:${remote_revision}"
+echo "Current dev_local_revision:${dev_local_revision}"
+echo "Current remote_revision:${remote_revision}"
 
 if [ "$dev_local_revision" != "$remote_revision" ]
 then
     echo "The revision number of the local copy does not match the remote respository version - this needs to be looked into - someone/some process has updated the repository - also check the database."
     exit 1
 fi
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Here we will add a file to make sure that there is at least one file change to check in which will bump up the revision number..."
+# -------------------------------------------------------------------------------------------------
+echo $(date) > /home/${USER}/projects/${PROJECT_NAME}/web/force_revision_bump.txt
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -343,11 +350,11 @@ case "${PROJECT_TYPE}" in
         exit 1
 esac
 
-# -------------------------------------------------------------------------------------------------
-echo
-echo `date`
-echo "Bring sites online..."
-# -------------------------------------------------------------------------------------------------
+### -------------------------------------------------------------------------------------------------
+##echo
+##echo `date`
+##echo "Bring sites online..."
+### -------------------------------------------------------------------------------------------------
 
 # These are the D6 commands.
 ##drush @${DEV_SITE_NAME} vset --always-set site_offline 0
@@ -357,6 +364,7 @@ echo "Bring sites online..."
 ##drush @${DEV_SITE_NAME} vset maintenance_mode 0 --yes
 ##drush @${BETA_SITE_NAME} vset maintenance_mode 0 --yes
 
+echo "The new revision number for the project is: $(svn info http://localhost/svn/${PROJECT_NAME} | grep '^Revision:' | awk '{print $2}')"
 
 # -------------------------------------------------------------------------------------------------
 echo

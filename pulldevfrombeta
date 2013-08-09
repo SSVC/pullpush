@@ -75,7 +75,7 @@ source /usr/local/share/pullpush/pullpush_functions
 
 # Output a usage message - used when the parameters input are not correct.
 usage () {
-    echo "Usage: $SCRIPT_NAME -p [project name]"
+    echo "Usage: $SCRIPT_NAME -p [project name] -s [softlock (yes|no)]"
 }
 
 check_beta_files_into_svn () {
@@ -174,10 +174,13 @@ check_beta_files_into_svn () {
 # -------------------------------------------------------------------------------------------------
 # Testing parameters
 # -------------------------------------------------------------------------------------------------
-while getopts ":p:" opt; do
+while getopts ":p:s:" opt; do
     case $opt in
 	p)
 	    PROJECT_NAME=$OPTARG
+	    ;;
+	s)
+	    SOFTLOCK=$OPTARG
 	    ;;
 	\?)
 	    echo "Invalid option: -$OPTARG" >&2
@@ -208,6 +211,21 @@ then
     exit 1
 fi
 
+# Check the softlock value has been set
+if [ -z $SOFTLOCK ]
+then
+    echo "The softlock parameter needs to be set."
+    usage
+    exit 1
+fi
+
+if [ $SOFTLOCK != "yes" ] && [ $SOFTLOCK != "no" ] 
+then
+    echo "The softlock parameter needs to be set to either 'yes' or 'no'."
+    usage
+    exit 1
+fi
+
 # Load the project settings file or display an error if it does not exist.
 if [ -e /etc/pullpush/projects/${PROJECT_NAME}.conf ]
 then
@@ -226,8 +244,71 @@ then
 fi
 
 echo "All tests completed OK."
-
 echo "Project name: ${PROJECT_NAME}"
+
+## Here we will look to see if the softlock has been set - if it has then we need to warn the user and
+## give them chance to cancel the pull.
+case "${PROJECT_TYPE}" in
+
+    drupal7)
+
+	MAINTENANCE_MODE=$(drush --root=/home/beta/projects/${PROJECT_NAME}/web vget maintenance_mode)
+	case "${MAINTENANCE_MODE}" in
+
+	    "maintenance_mode: 1")
+		echo "The beta site is currently in maintenance mode which indicates that a dev has pulled a copy and set the softlock."
+		echo "You can still pull a copy of the beta site to your dev copy but if you push changes you may prevent another developer from pushing updates."
+
+		read -p "Do you still want to pull a copy of beta to your dev copy (y/n)?"
+		if [ $REPLY != "y" ]; then
+		    echo "Cancelling pull from beta..."
+		    exit 1
+		fi
+		echo "Continuing with the pull from beta..."
+		;;
+
+	    "maintenance_mode: 0")
+		echo "The site is not in maintenance mode."
+		;;
+
+	    *)
+		echo "Error - Invalid softlock choice."
+		exit 1
+	esac
+        ;;
+
+
+    drupal6)
+
+	SITE_OFFLINE=$(drush --root=/home/beta/projects/${PROJECT_NAME}/web vget site_offline)
+	case "${SITE_OFFLINE}" in
+
+	    "site_offline: 1")
+		echo "The beta site is currently in offline mode which indicates that a dev has pulled a copy and set the softlock."
+		echo "You can still pull a copy of the beta site to your dev copy but if you push changes you may prevent another developer from pushing updates."
+
+		read -p "Do you still want to pull a copy of beta to your dev copy (y/n)?"
+		if [ $REPLY != "y" ]; then
+		    echo "Cancelling pull from beta..."
+		    exit 1
+		fi
+		echo "Continuing with the pull from beta..."
+		;;
+
+	    "site_offline: 0")
+		echo "The site is not in offline mode."
+		;;
+
+	    *)
+		echo "Error - Invalid softlock choice."
+		exit 1
+	esac
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -253,6 +334,58 @@ echo "Make backup copy of the beta site database..."
 mkdir -p /home/${USER}/backups/beta_sites
 mysqldump betapr${PROJECT_NAME} > /home/${USER}/backups/beta_sites/${PROJECT_NAME}.sql
 ##tar --create --file=/home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.tar /home/beta/projects/${PROJECT_NAME}/web
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Here we will set or unset the softlock ..."
+# -------------------------------------------------------------------------------------------------
+case "${PROJECT_TYPE}" in
+
+    drupal7)
+
+	case "${SOFTLOCK}" in
+
+	    yes)
+		echo "The softlock has set on."
+		drush -r /home/beta/projects/${PROJECT_NAME}/web vset maintenance_mode 1 --yes
+		;;
+
+	    no)
+		echo "The softlock has turned off."
+		drush -r /home/beta/projects/${PROJECT_NAME}/web vset maintenance_mode 0 --yes
+		;;
+
+	    *)
+		echo "Error - Invalid softlock choice."
+		exit 1
+	esac
+        ;;
+
+    drupal6)
+
+	case "${SOFTLOCK}" in
+
+	    yes)
+		echo "The softlock has set on."
+		drush -r /home/beta/projects/${PROJECT_NAME}/web vset site_offline 1 --yes
+		;;
+
+	    no)
+		echo "The softlock has turned off."
+		drush -r /home/beta/projects/${PROJECT_NAME}/web vset site_offline 0 --yes
+		;;
+
+	    *)
+		echo "Error - Invalid softlock choice."
+		exit 1
+	esac
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
 
 # -------------------------------------------------------------------------------------------------
 echo

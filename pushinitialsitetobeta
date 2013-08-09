@@ -368,7 +368,30 @@ case "${PROJECT_TYPE}" in
         exit 1
 esac
 
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Explicitly setting the maintenance or offline mode for Drupal sites..."
+# -------------------------------------------------------------------------------------------------
+# It looks like that in Drupal variables are not set explicitly by default.  Here we will set the
+# maintenance/offline mode variables so they hold default values which are then read by the 
+# pulldevfrombeta script.
+case "${PROJECT_TYPE}" in
 
+    drupal7)
+
+	drush -r /home/beta/projects/${PROJECT_NAME}/web vset maintenance_mode 0 --yes
+        ;;
+
+    drupal6)
+
+	drush -r /home/beta/projects/${PROJECT_NAME}/web vset site_offline 0 --yes
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
 
 # -------------------------------------------------------------------------------------------------
 echo
