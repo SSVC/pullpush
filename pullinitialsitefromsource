@@ -15,6 +15,13 @@
 # COMPANY: Freeway Projects Limited
 #===================================================================================
 
+# Make sure only one Pullpush script is running at any one time.
+exec 9>/var/lock/pullpush
+if ! flock -n 9  ; then
+   echo "Another Pullpush script is currently running - try again later.";
+   exit 1
+fi
+
 # -------------------------------------------------------------------------------------------------
 # Set up global variables.
 #

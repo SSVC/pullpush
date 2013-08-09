@@ -13,6 +13,13 @@
 # COMPANY: Freeway Projects Limited
 #===================================================================================
 
+# Make sure only one Pullpush script is running at any one time.
+exec 9>/var/lock/pullpush
+if ! flock -n 9  ; then
+   echo "Another Pullpush script is currently running - try again later.";
+   exit 1
+fi
+
 # -------------------------------------------------------------------------------------------------
 # Set up global variables.
 #
@@ -163,8 +170,25 @@ echo `date`
 echo "Make backup copy of the initial site..."
 # -------------------------------------------------------------------------------------------------
 mkdir -p ~/backups/initial_sites
-sudo mysqldump ${USER}is${INITIAL_SITE_NAME} > /home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}_${DATE_TIME}.sql
-tar --create --file=/home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}_${DATE_TIME}.tar /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web
+##sudo mysqldump ${USER}is${INITIAL_SITE_NAME} > /home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+sudo mysqldump ${USER}is${INITIAL_SITE_NAME} > /home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}.sql
+####tar --create --file=/home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}_${DATE_TIME}.tar /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "For Drupal sites we should clear out the caches..."
+# -------------------------------------------------------------------------------------------------
+case "${PROJECT_TYPE}" in
+
+    drupal7|drupal6)
+	drush --root=/home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web cache-clear all
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -177,7 +201,7 @@ DATABASE_USER=betapr${PROJECT_NAME}
 DATABASE_PASSWORD=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
 __create_mysql_database_and_user_account ${DATABASE_NAME} ${DATABASE_USER} ${DATABASE_PASSWORD}
 
-mysql betapr${PROJECT_NAME} < /home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+mysql betapr${PROJECT_NAME} < /home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}.sql
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -191,7 +215,7 @@ sudo chown -R www-data:www-data /var/lib/svn/${PROJECT_NAME}
 
 # Here we will put a dump of the database into the code repository.  This means that the site can
 # be rebuilt from an export from the repository if needed.
-cp /home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}_${DATE_TIME}.sql /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web/${USER}is${INITIAL_SITE_NAME}_${DATE_TIME}.sql
+####cp /home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}_${DATE_TIME}.sql /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web/${USER}is${INITIAL_SITE_NAME}_${DATE_TIME}.sql
 
 svn import /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web http://localhost/svn/${PROJECT_NAME} -m "Initial import."
 
@@ -234,7 +258,7 @@ case "${PROJECT_TYPE}" in
 
     *)
         echo "Error - Invalid project type."
-        exit -1
+        exit 1
 esac
 
 # -------------------------------------------------------------------------------------------------
@@ -326,6 +350,24 @@ echo "Set up the beta vhost..."
 ##fi
 
 __set_up_vhost beta-pr-${PROJECT_NAME} /home/beta/projects/${PROJECT_NAME}/web
+
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "To be tidy we will clear out the caches on the new beta site..."
+# -------------------------------------------------------------------------------------------------
+case "${PROJECT_TYPE}" in
+
+    drupal7|drupal6)
+	drush --root=/home/beta/projects/${PROJECT_NAME}/web cache-clear all
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
+
 
 
 # -------------------------------------------------------------------------------------------------

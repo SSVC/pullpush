@@ -1,19 +1,24 @@
 #!/bin/bash
 #===================================================================================
 #
-# FILE: pullinitialsitefromsource
+# FILE: pushdevtobeta
 #
-# USAGE: pullinitialsitefromsource [project type]
+# USAGE: pushdevtobeta [project type]
 #
-# DESCRIPTION: This will create an initial site which will be a vanilla copy from a
-# framework.  It will achieve this by pulling down any source code needed from 
-# repositories and creating any required databases.
+# DESCRIPTION: This will push the local dev copy up to the beta version.
 #
 # OPTIONS: see function ’usage’ below
 # NOTES: ---
 # AUTHOR: Kevin Bailey, kbailey@freewayprojects.com
 # COMPANY: Freeway Projects Limited
 #===================================================================================
+
+# Make sure only one Pullpush script is running at any one time.
+exec 9>/var/lock/pullpush
+if ! flock -n 9  ; then
+   echo "Another Pullpush script is currently running - try again later.";
+   exit 1
+fi
 
 # -------------------------------------------------------------------------------------------------
 # Set up global variables.
@@ -130,10 +135,6 @@ fi
 echo "All tests completed OK."
 echo "Project name: ${PROJECT_NAME}"
 
-
-
-
-
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
@@ -163,8 +164,18 @@ echo "Changing permissions on the files/ directory to enable the script user to 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Clearing out the caches on the sites to trim the database and files/ before copying and backing up..."
+echo "Clearing out the caches on the sites to trim the database and files/ before copying..."
 # -------------------------------------------------------------------------------------------------
+case "${PROJECT_TYPE}" in
+
+    drupal7|drupal6)
+	drush --root=/home/${USER}/projects/${PROJECT_NAME}/web cache-clear all
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
 
 # Bear in mind here that we may need to chmod the /files directory to 777 if we are not using Apache-ITK.
 ##drush @${DEV_SITE_NAME} cache-clear all
@@ -287,7 +298,6 @@ then
     sudo chmod -R 775 /home/beta/projects/${PROJECT_NAME}/web/sites/default/files
 fi
 
-
 # NB Now we need to chmod permissions on the files/ directory to enable the web server to manipulate
 # these files.
 ##sudo chmod -R 777 ${BETA_DOCUMENT_ROOT}/sites/default/files
@@ -317,6 +327,21 @@ echo "Here we will clear out the caches again - this is needed by some modules s
 
 ###drush --root=/home/${USER}/projects/${PROJECT_NAME} cache-clear all
 ###drush --root=/home/beta/web/${PROJECT_NAME} cache-clear all
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Clearing out the beta cache to clean it up..."
+# -------------------------------------------------------------------------------------------------
+case "${PROJECT_TYPE}" in
+
+    drupal7|drupal6)
+	drush --root=/home/beta/projects/${PROJECT_NAME}/web cache-clear all
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
 
 # -------------------------------------------------------------------------------------------------
 echo

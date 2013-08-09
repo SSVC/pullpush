@@ -13,6 +13,13 @@
 # COMPANY: Freeway Projects Limited
 #===================================================================================
 
+# Make sure only one Pullpush script is running at any one time.
+exec 9>/var/lock/pullpush
+if ! flock -n 9  ; then
+   echo "Another Pullpush script is currently running - try again later.";
+   exit 1
+fi
+
 # -------------------------------------------------------------------------------------------------
 # Set up global variables.
 #
@@ -161,7 +168,7 @@ check_beta_files_into_svn () {
     echo "Creating a database copy with the matching revision number..."
     new_beta_revision=$(svn info /home/beta/projects/${PROJECT_NAME}/web | grep '^Revision:' | sed s/^Revision:[[:space:]]*// )
     sudo -u beta -i "mkdir -p /home/beta/backups"
-    sudo -u beta -i "cp /home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.sql /home/beta/backups/${PROJECT_NAME}_r${new_beta_revision}.sql"
+    sudo -u beta -i "cp /home/${USER}/backups/beta_sites/${PROJECT_NAME}.sql /home/beta/backups/${PROJECT_NAME}_r${new_beta_revision}.sql"
 }
 
 # -------------------------------------------------------------------------------------------------
@@ -225,10 +232,26 @@ echo "Project name: ${PROJECT_NAME}"
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
+echo "Before working with the beta site we will clear out the caches..."
+# -------------------------------------------------------------------------------------------------
+case "${PROJECT_TYPE}" in
+
+    drupal7|drupal6)
+	drush --root=/home/beta/projects/${PROJECT_NAME}/web cache-clear all
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
 echo "Make backup copy of the beta site database..."
 # -------------------------------------------------------------------------------------------------
 mkdir -p /home/${USER}/backups/beta_sites
-mysqldump betapr${PROJECT_NAME} > /home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.sql
+mysqldump betapr${PROJECT_NAME} > /home/${USER}/backups/beta_sites/${PROJECT_NAME}.sql
 ##tar --create --file=/home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.tar /home/beta/projects/${PROJECT_NAME}/web
 
 # -------------------------------------------------------------------------------------------------
@@ -259,7 +282,7 @@ then
     __create_mysql_database_and_user_account ${DATABASE_NAME} ${DATABASE_USER} ${DATABASE_PASSWORD}
 
     echo "Loading the database from the beta database backup..."
-    mysql ${USER}pr${PROJECT_NAME} < /home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.sql
+    mysql ${USER}pr${PROJECT_NAME} < /home/${USER}/backups/beta_sites/${PROJECT_NAME}.sql
 
     echo "Checking out the files from SVN to the new dev site..."
     svn checkout http://localhost/svn/${PROJECT_NAME} /home/${USER}/projects/${PROJECT_NAME}/web
@@ -399,9 +422,26 @@ else
     echo "Copy beta database on to dev..."
     mysqladmin --force drop ${USER}pr${PROJECT_NAME}
     mysqladmin create ${USER}pr${PROJECT_NAME}
-    mysql ${USER}pr${PROJECT_NAME} < /home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.sql
+    mysql ${USER}pr${PROJECT_NAME} < /home/${USER}/backups/beta_sites/${PROJECT_NAME}.sql
 
 fi
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Here we will clear out caches - this avoids issues and keeps the sizes down..."
+# -------------------------------------------------------------------------------------------------
+case "${PROJECT_TYPE}" in
+
+    drupal7|drupal6)
+	drush --root=/home/beta/projects/${PROJECT_NAME}/web cache-clear all
+	drush --root=/home/${USER}/projects/${PROJECT_NAME}/web cache-clear all
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -417,4 +457,3 @@ echo "Finished - the developer copy of the site is at http://${USER}-pr-${PROJEC
 # -------------------------------------------------------------------------------------------------
 
 exit 0
-
