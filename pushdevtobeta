@@ -14,6 +14,8 @@
 #===================================================================================
 
 # Make sure only one Pullpush script is running at any one time.
+touch /var/lock/pullpush
+chmod --quiet 666 /var/lock/pullpush
 exec 9>/var/lock/pullpush
 if ! flock -n 9  ; then
    echo "Another Pullpush script is currently running - try again later.";
@@ -363,6 +365,24 @@ esac
 # These commands work for Drupal 7.
 ##drush @${DEV_SITE_NAME} vset maintenance_mode 0 --yes
 ##drush @${BETA_SITE_NAME} vset maintenance_mode 0 --yes
+
+echo "The softlock is being turned off...."
+case "${PROJECT_TYPE}" in
+
+    drupal7)
+
+	drush -r /home/beta/projects/${PROJECT_NAME}/web vset maintenance_mode 0 --yes
+        ;;
+
+    drupal6)
+
+	drush -r /home/beta/projects/${PROJECT_NAME}/web vset site_offline 0 --yes
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
 
 echo "The new revision number for the project is: $(svn info http://localhost/svn/${PROJECT_NAME} | grep '^Revision:' | awk '{print $2}')"
 

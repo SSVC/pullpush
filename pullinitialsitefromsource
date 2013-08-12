@@ -16,6 +16,8 @@
 #===================================================================================
 
 # Make sure only one Pullpush script is running at any one time.
+touch /var/lock/pullpush
+chmod --quiet 666 /var/lock/pullpush
 exec 9>/var/lock/pullpush
 if ! flock -n 9  ; then
    echo "Another Pullpush script is currently running - try again later.";

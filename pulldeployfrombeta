@@ -1,4 +1,273 @@
 #!/bin/bash
+#===================================================================================
+#
+# FILE: pulldeployfrombeta
+#
+# USAGE: pulldeployfrombeta -p [project type]
+#
+# DESCRIPTION: This will pull a copy of a beta site and create a new deploy site.
+#
+# OPTIONS: see function ’usage’ below
+# NOTES: ---
+# AUTHOR: Kevin Bailey, kbailey@freewayprojects.com
+# COMPANY: Freeway Projects Limited
+#===================================================================================
+
+# Make sure only one Pullpush script is running at any one time.
+touch /var/lock/pullpush
+chmod --quiet 666 /var/lock/pullpush
+exec 9>/var/lock/pullpush
+if ! flock -n 9  ; then
+   echo "Another Pullpush script is currently running - try again later.";
+   exit 1
+fi
+
+# -------------------------------------------------------------------------------------------------
+# Set up global variables.
+#
+# We are going to explicitly set the script name variable.  Obviously the script name is available
+# as $0 - but this is not consistent and may or may not contain the path.  Also, this means we can
+# use the bash debugger without needing to handle the fact that $0 would contain something like
+# 'bashdb'.
+# -------------------------------------------------------------------------------------------------
+SCRIPT_NAME=pulldeployfrombeta
+DATE_TIME=$(date +%Y%m%d-%H%M%S)
+
+# -------------------------------------------------------------------------------------------------
+# Set up the user to be able to run sudo commands - this will be revoked at the end of the script.
+# -------------------------------------------------------------------------------------------------
+sudo -v
+
+# -------------------------------------------------------------------------------------------------
+# Log all output from the script.
+# 
+# As we are going to be carrying out multiple steps and it is important we can see all the output
+# to be able to diagnose problems.
+# -------------------------------------------------------------------------------------------------
+
+# Create a place for the log files.
+sudo mkdir -p /var/log/pullpush
+sudo chmod 777 /var/log/pullpush
+
+# Create a pipe...
+tmppipe=$(mktemp -u)
+mkfifo ${tmppipe}
+
+# ...then start a tee process which takes as its input the pipe - and output to the logfile (and 
+# standard output) and then push the tee process into the background (subshell).
+tee < ${tmppipe} /var/log/pullpush/${DATE_TIME}_${USER}_${SCRIPT_NAME}.log &
+
+# Redirect both standard output and standard error to the pipe just created - these outputs
+# will then be directed via the pipe to standard output (the current shell) and the log file.
+exec &> ${tmppipe}
+
+# This sets up the pipe to be removed - it will only be fully dropped when no process is using it.
+rm ${tmppipe}
+
+# -------------------------------------------------------------------------------------------------
+# Import Pullpush functions.
+# -------------------------------------------------------------------------------------------------
+source /usr/local/share/pullpush/pullpush_functions
+
+# -------------------------------------------------------------------------------------------------
+# Local functions
+#
+# Here we will define all the functions used by this script.
+# -------------------------------------------------------------------------------------------------
+
+# Output a usage message - used when the parameters input are not correct.
+usage () {
+    echo "Usage: $SCRIPT_NAME -p [project name]"
+}
+
+
+# -------------------------------------------------------------------------------------------------
+# Testing parameters
+# -------------------------------------------------------------------------------------------------
+while getopts ":p:" opt; do
+    case $opt in
+	p)
+	    PROJECT_NAME=$OPTARG
+	    ;;
+	\?)
+	    echo "Invalid option: -$OPTARG" >&2
+	    usage
+	    exit 1
+	    ;;
+	:)
+	    echo "Option -$OPTARG requires an argument." >&2
+	    usage
+	    exit 1
+	    ;;
+    esac
+done
+
+# Check the parameter has had a value assigned.
+if [ -z $PROJECT_NAME ]
+then
+    echo "The project name needs to be set."
+    usage
+    exit 1
+fi
+
+# Check the project exists.
+if [ ! -e /home/beta/projects/${PROJECT_NAME}/web ]
+then
+    echo "The project does not appear to exist."
+    usage
+    exit 1
+fi
+
+# Load the project settings file or display an error if it does not exist.
+if [ -e /etc/pullpush/projects/${PROJECT_NAME}.conf ]
+then
+    source /etc/pullpush/projects/${PROJECT_NAME}.conf
+else
+    echo "ERROR - The project settings file /etc/pullpush/projects/${PROJECT_NAME}.conf not found."
+    exit 1
+fi
+
+# Load the configuration file and check it was loaded OK.
+__load_configuration_file
+
+if [ $? -ne 0 ]
+then
+    echo "Configuration file was not loaded."
+fi
+
+echo "All tests completed OK."
+echo "Project name: ${PROJECT_NAME}"
+
+
+# -------------------------------------------------------------------------------------------------
+# The plan.
+#
+# If necessary create the DB.
+# Clear the beta caches.
+# Backup the beta DB.
+# Load the DB from the backup.
+# Check beta into SVN.
+# Export files from SVN.
+# Update/create settings.php
+# If necessary create the vhost.
+# -------------------------------------------------------------------------------------------------
+
+# Set up the database and database user.
+DATABASE_NAME=deploypr${PROJECT_NAME}
+DATABASE_USER=deploypr${PROJECT_NAME}
+DATABASE_PASSWORD=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
+
+# If necessary create the database - if not then update the user. 
+if [ ! -e /home/deploy/projects/${PROJECT_NAME}/web ]
+then
+
+    # Set up the vhost.
+    __set_up_vhost deploy-pr-${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web
+
+
+    echo "Creating database..."
+    __create_mysql_database_and_user_account ${DATABASE_NAME} ${DATABASE_USER} ${DATABASE_PASSWORD}
+else
+
+    # Here we are going to update the privileges so we have the password in this script and we can add it to the settings file.  
+    # Also, it is a good idea to refresh the password to prevent conntecting to the wrong database.
+    echo "Updating database user..."
+    mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
+
+fi
+
+# Clear the beta caches.
+case "${PROJECT_TYPE}" in
+
+    drupal7|drupal6)
+	drush --root=/home/beta/projects/${PROJECT_NAME}/web cache-clear all
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
+
+# Backup the beta DB.
+mkdir -p /home/${USER}/backups/beta_sites
+mysqldump betapr${PROJECT_NAME} > /home/${USER}/backups/beta_sites/${PROJECT_NAME}.sql
+
+# Load the DB from the backup.
+mysql deploypr${PROJECT_NAME} < /home/${USER}/backups/beta_sites/${PROJECT_NAME}.sql
+
+# Export files from SVN.
+sudo -u deploy -i "svn --force export http://localhost/svn/${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web"
+
+# Create and update the settings file.
+case "${PROJECT_TYPE}" in
+
+    drupal7)
+
+	# We will cpoy the file before changing it as changing it in place gets complicated when trying to excape the sudo command.
+	cp /home/deploy/projects/${PROJECT_NAME}/web/sites/default/default.settings.php /home/${USER}/settings.php.deploypr${PROJECT_NAME}
+	cat <<EOFSETTINGS >> /home/${USER}/settings.php.deploypr${PROJECT_NAME}
+
+\$databases = array (
+  'default' => 
+  array (
+    'default' => 
+    array (
+      'database' => '${DATABASE_NAME}',
+      'username' => '${DATABASE_USER}',
+      'password' => '${DATABASE_PASSWORD}',
+      'host' => 'localhost',
+      'port' => '',
+      'driver' => 'mysql',
+      'prefix' => '',
+    ),
+  ),
+);
+
+EOFSETTINGS
+
+	sudo -u deploy -i cp /home/${USER}/settings.php.deploypr${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/settings.php
+	rm /home/${USER}/settings.php.deploypr${PROJECT_NAME}
+	;;
+
+    drupal6)
+
+	# We will copy the file before changing it as changing it in place gets complicated when trying to excape the sudo command.
+	cp /home/deploy/projects/${PROJECT_NAME}/web/sites/default/default.settings.php /home/${USER}/settings.php.deploypr${PROJECT_NAME}
+##	echo "\$db_url = 'mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}'" >> /home/${USER}/settings.php.betapr${PROJECT_NAME}
+	echo "\$db_url = 'mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}';" >> /home/${USER}/settings.php.deploypr${PROJECT_NAME}
+	sudo -u deploy -i cp /home/${USER}/settings.php.deploypr${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/settings.php
+	rm /home/${USER}/settings.php.deploypr${PROJECT_NAME}
+	;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit -1
+esac
+
+# If necessary create the vhost.
+##if [ ! -e /home/deploy/projects/${PROJECT_NAME}/web ]
+##then
+
+##    __set_up_vhost deploy-pr-${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web
+
+##fi
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Finished - the deploy copy of the site is at http://deploy-pr-${PROJECT_NAME}.${SERVER_FQDN}..."
+# -------------------------------------------------------------------------------------------------
+
+
+exit 0
+
+
+
+
+
+
+
+
 
 # pulldeployfrombeta
 # Pull deploy from beta
@@ -26,38 +295,6 @@ rm ${logfile}.pipe
 # variables - this is to prevent users accidentally using someone elses databases and web space.
 # -------------------------------------------------------------------------------------------------
 
-: <<'QWERTY'
-
-echo
-echo `date`
-echo "Testing for argument..."
-if [ $1 ]
-then
-    echo "Argument supplied OK as $1"
-    echo
-else
-    echo "ERROR - No argument supplied"
-    exit -1
-fi
-
-# Check the local variables file exists.
-if [ -e ~/.pullpush/${1} ]
-then
-        source ~/.pullpush/$1
-else
-        echo "ERROR - Configuration file $1 not found."
-        exit -1
-fi
-
-# Check the global settings file exists.
-if [ -e /home/pullpush/.pullpush/projects/${1} ]
-then
-        source /home/pullpush/.pullpush/projects/${1}
-else
-        echo "ERROR - Global configuration file $1 not found."
-        exit -1
-fi
-QWERTY
 
 
 echo
@@ -733,6 +970,7 @@ echo "Bring sites online..."
 # These commands work for Drupal 7.
 ##drush @${DEPLOY_SITE_NAME} vset maintenance_mode 0 --yes
 ##drush @${BETA_SITE_NAME} vset maintenance_mode 0 --yes
+
 
 
 # -------------------------------------------------------------------------------------------------
