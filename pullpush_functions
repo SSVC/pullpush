@@ -22,6 +22,8 @@ __load_configuration_file () {
     fi
 }
 
+# Create a standard MySQL database and a user account which is set with all privileges
+# to the database.
 __create_mysql_database_and_user_account () {
 
     DATABASE_NAME=${1}
@@ -32,7 +34,6 @@ __create_mysql_database_and_user_account () {
 	
 	drupal6|drupal7)
 
-##	    mysqladmin --force drop ${DATABASE_NAME}
 	    mysqladmin create ${DATABASE_NAME}
 	    mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
             ;;
@@ -43,7 +44,7 @@ __create_mysql_database_and_user_account () {
     esac
 }
 
-
+# Set up an Apache vhost with configuration from template files.
 __set_up_vhost () {
 
     VHOST_NAME=${1}
@@ -80,7 +81,6 @@ __set_up_vhost () {
     esac
 
 }
-
 
 __check_beta_files_into_svn () {
 
@@ -130,8 +130,6 @@ __check_beta_files_into_svn () {
 	echo "The revision number of the local copy does not match the remote respository version - this needs to be looked into - someone/some process has updated the repository which needs to be checked - also, check for any database changes?"
 	exit 1
     fi
-
-    echo "Committing all the beta files to SVN..."
 
     # We've finished the checks - now lets commit the changes to beta files/ to the repository.  We will first svn add/delete 
     # files as necessary.
