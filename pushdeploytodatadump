@@ -1,126 +1,149 @@
 #!/bin/bash
+#===================================================================================
+#
+# FILE: pushdeploytodatadump
+#
+# USAGE: pushdeploytodatadump -p [project type]
+#
+# DESCRIPTION: This will push a copy of the deploy site into data dump files.
+#
+# OPTIONS: see function ’usage’ below
+# NOTES: ---
+# AUTHOR: Kevin Bailey, kbailey@freewayprojects.com
+# COMPANY: Freeway Projects Limited
+#===================================================================================
 
-# pushdeploytodatadump
-# Push deploy to data dump
-
-# -------------------------------------------------------------------------------------------------
-# This script will dump out the deploy copy to data files ready for deployment the the live server.
-# -------------------------------------------------------------------------------------------------
-
-# -------------------------------------------------------------------------------------------------
-# Logging setup
-# -------------------------------------------------------------------------------------------------
-
-# These lines have been copied from http://stackoverflow.com/questions/3173131/redirect-copy-of-stdout-to-log-file-from-within-bash-script-itself
-# and will send the script output to a log file.
-mkdir -p ~/logs/pullpush
-DATE_TIME=`date +%Y%m%d-%H%M%S`
-logfile=~/logs/pullpush/pushdeploytodatadump_${DATE_TIME}.log
-mkfifo ${logfile}.pipe
-tee < ${logfile}.pipe $logfile &
-exec &> ${logfile}.pipe
-rm ${logfile}.pipe
-
-# -------------------------------------------------------------------------------------------------
-# We are going to bring in a parameter which will be used to pull in a file containing values for
-# variables - this is to prevent users accidentally using someone elses databases and web space.
-# -------------------------------------------------------------------------------------------------
-: <<'QWERTY'
-
-
-echo
-echo `date`
-echo "Testing for argument..."
-if [ $1 ]
-then
-    echo "Project name argument supplied OK as $1"
-    echo
-else
-    echo "ERROR - No argument supplied"
-    exit -1
+# Make sure only one Pullpush script is running at any one time.
+touch /var/lock/pullpush
+chmod --quiet 666 /var/lock/pullpush
+exec 9>/var/lock/pullpush
+if ! flock -n 9  ; then
+   echo "Another Pullpush script is currently running - try again later.";
+   exit 1
 fi
 
-# Check the variables file exists.
-if [ -e ~/.pullpush/${1} ]
+# -------------------------------------------------------------------------------------------------
+# Set up global variables.
+#
+# We are going to explicitly set the script name variable.  Obviously the script name is available
+# as $0 - but this is not consistent and may or may not contain the path.  Also, this means we can
+# use the bash debugger without needing to handle the fact that $0 would contain something like
+# 'bashdb'.
+# -------------------------------------------------------------------------------------------------
+SCRIPT_NAME=pushdeploytodatadump
+DATE_TIME=$(date +%Y%m%d-%H%M%S)
+
+# -------------------------------------------------------------------------------------------------
+# Set up the user to be able to run sudo commands - this will be revoked at the end of the script.
+# -------------------------------------------------------------------------------------------------
+sudo -v
+
+# -------------------------------------------------------------------------------------------------
+# Log all output from the script.
+# 
+# As we are going to be carrying out multiple steps and it is important we can see all the output
+# to be able to diagnose problems.
+# -------------------------------------------------------------------------------------------------
+
+# Create a place for the log files.
+sudo mkdir -p /var/log/pullpush
+sudo chmod 777 /var/log/pullpush
+
+# Create a pipe...
+tmppipe=$(mktemp -u)
+mkfifo ${tmppipe}
+
+# ...then start a tee process which takes as its input the pipe - and output to the logfile (and 
+# standard output) and then push the tee process into the background (subshell).
+tee < ${tmppipe} /var/log/pullpush/${DATE_TIME}_${USER}_${SCRIPT_NAME}.log &
+
+# Redirect both standard output and standard error to the pipe just created - these outputs
+# will then be directed via the pipe to standard output (the current shell) and the log file.
+exec &> ${tmppipe}
+
+# This sets up the pipe to be removed - it will only be fully dropped when no process is using it.
+rm ${tmppipe}
+
+# -------------------------------------------------------------------------------------------------
+# Import Pullpush functions.
+# -------------------------------------------------------------------------------------------------
+source /usr/local/share/pullpush/pullpush_functions
+
+# -------------------------------------------------------------------------------------------------
+# Local functions
+#
+# Here we will define all the functions used by this script.
+# -------------------------------------------------------------------------------------------------
+
+# Output a usage message - used when the parameters input are not correct.
+usage () {
+    echo "Usage: $SCRIPT_NAME -p [project name]"
+}
+
+# -------------------------------------------------------------------------------------------------
+# Testing parameters
+# -------------------------------------------------------------------------------------------------
+while getopts ":p:" opt; do
+    case $opt in
+	p)
+	    PROJECT_NAME=$OPTARG
+	    ;;
+	\?)
+	    echo "Invalid option: -$OPTARG" >&2
+	    usage
+	    exit 1
+	    ;;
+	:)
+	    echo "Option -$OPTARG requires an argument." >&2
+	    usage
+	    exit 1
+	    ;;
+    esac
+done
+
+# Check the parameter has had a value assigned.
+if [ -z $PROJECT_NAME ]
 then
-        source ~/.pullpush/$1
-else
-        echo "ERROR - Configuration file $1 not found."
-        exit -1
+    echo "The project name needs to be set."
+    usage
+    exit 1
 fi
 
-# Check the global settings file exists.
-if [ -e /home/pullpush/.pullpush/projects/${1} ]
+# Check the project exists.
+if [ ! -e /home/beta/projects/${PROJECT_NAME}/web ]
 then
-        source /home/pullpush/.pullpush/projects/${1}
-else
-        echo "ERROR - Global configuration file $1 not found."
-        exit -1
-fi
-QWERTY
-
-echo
-echo `date`
-echo "Testing for argument which should be the project name..."
-if [ $1 ]
-then
-    echo "Argument supplied OK as $1"
-    echo
-else
-    echo "ERROR - No argument supplied"
-    exit -1
+    echo "The project does not appear to exist."
+    usage
+    exit 1
 fi
 
-# Set up variables used through this script.
-PROJECT_NAME=${1}
-DATE_TIME=`date +%Y%m%d-%H%M%S`
-
-# Check the Pullpush configuration file exists.
-if [ -e /etc/pullpush/pullpush.conf ]
-then
-    source /etc/pullpush/pullpush.conf
-else
-    echo
-    echo "ERROR - Pullpush configuration file not found."
-    exit -1
-fi
-
-# Check the project settings file exists.
+# Load the project settings file or display an error if it does not exist.
 if [ -e /etc/pullpush/projects/${PROJECT_NAME}.conf ]
 then
     source /etc/pullpush/projects/${PROJECT_NAME}.conf
 else
-    echo "ERROR - The configuration file /etc/pullpush/projects/${PROJECT_NAME}.conf not found."
-    exit -1
+    echo "ERROR - The project settings file /etc/pullpush/projects/${PROJECT_NAME}.conf not found."
+    exit 1
 fi
 
+# Load the configuration file and check it was loaded OK.
+__load_configuration_file
+
+if [ $? -ne 0 ]
+then
+    echo "Configuration file was not loaded."
+fi
+
+echo "All tests completed OK."
+echo "Project name: ${PROJECT_NAME}"
 
 # -------------------------------------------------------------------------------------------------
-echo
-echo `date`
-echo "Take site offline..."
+# The plan.
+#
+# Clear caches on deploy site.
+# Dump out DB.
+# Tar up all files with under a single level directory.
 # -------------------------------------------------------------------------------------------------
-
-# Future versions of the script will need to pick up if the site is D6 or D7.  It is possible that
-# both of these commands can be run on D6 and D7 safely.
-
-# These are the commands for Drupal 6.
-# drush @${DEV_SITE_NAME} vset --always-set site_offline 1
-# drush @${BETA_SITE_NAME} vset --always-set site_offline 1
-
-# These commands work for Drupal 7.
-##drush ${DEPLOY_DRUSH_ALIAS} vset maintenance_mode 1 --yes
-
-## Todo - this can be added back in later.
-####drush --root=/home/deploy/web/${PROJECT_NAME} vset maintenance_mode 1 --yes
-
-
-# -------------------------------------------------------------------------------------------------
-echo
-echo `date`
-echo "Changing permissions on the files/ directory to enable the script user to be able to work with wwwrun owned files..."
-# -------------------------------------------------------------------------------------------------
-##sudo chmod -R 777 ${DEPLOY_DOCUMENT_ROOT}/sites/default/files
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -132,58 +155,30 @@ echo "Clearing out the caches on the sites to trim the database and files/ befor
 
 # Clear out the caches on the beta site.  As the dev copy will become a copy of the beta site we do
 # not want to pull down all the caches as well.  
-drush --root=/home/deploy/web/${PROJECT_NAME} cache-clear all
-
-# NB - We do not want to clear out the dev site cache as this deletes directories and this causes the svn 
-# revert command to fail.  By the end of this script the dev copy should be an exact copy of beta and that
-# has had the caches cleared.
-##drush @${DEV_SITE_NAME} cache-clear all
+drush --root=/home/deploy/projects/${PROJECT_NAME}/web cache-clear all
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Make data dump..."
+echo "Dumping out the database to a file..."
 # -------------------------------------------------------------------------------------------------
-
-#mkdir -p ${BACKUP_LOCATION}
-#mysqldump -u ${DEV_MYSQL_USER} -p${DEV_MYSQL_PASS} ${DEV_MYSQL_DATABASE} > ${BACKUP_LOCATION}${DATE_TIME}_${DEV_MYSQL_DATABASE}.sql
-#tar --create --file=${BACKUP_LOCATION}${DATE_TIME}_${DEV_SITE_NAME}.tar ${DEV_DOCUMENT_ROOT}
-
-##ssh deploy@localhost "mkdir -p ${DEPLOY_DATA_DUMP_DIRECTORY}${PROJECT_NAME}"
-##ssh deploy@localhost "mysqldump -u ${DEPLOY_MYSQL_USER} -p${DEPLOY_MYSQL_PASS} ${DEPLOY_MYSQL_DATABASE} > ${DEPLOY_DATA_DUMP_DIRECTORY}${PROJECT_NAME}/${DATE_TIME}_${DEPLOY_MYSQL_DATABASE}.sql"
-##ssh deploy@localhost "tar --create --file=${DEPLOY_DATA_DUMP_DIRECTORY}${PROJECT_NAME}/${DATE_TIME}_${DEPLOY_SITE_NAME}.tar ${DEPLOY_DOCUMENT_ROOT}"
-
-sudo -u deploy mkdir -p /home/deploy/data_dumps
-sudo chmod 777 /home/deploy/data_dumps
-sudo mysqldump deploy${PROJECT_NAME} > /home/deploy/data_dumps/${PROJECT_NAME}_${DATE_TIME}.sql
-sudo -u deploy tar --create --file=/home/deploy/data_dumps/${PROJECT_NAME}_${DATE_TIME}.tar /home/deploy/web/${PROJECT_NAME}
-
-# We will also create an arhive backup which will be used by the Drupal restore methods.
-sudo -u deploy drush --root=/home/deploy/web/${PROJECT_NAME} archive-dump --destination=/home/deploy/data_dumps/archive_${PROJECT_NAME}_${DATE_TIME}.tar
-
+sudo -u deploy -i mkdir -p /home/deploy/data_dumps
+sudo -u deploy -i "mysqldump deploypr${PROJECT_NAME} > /home/deploy/data_dumps/${PROJECT_NAME}_${DATE_TIME}.sql"
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Bring site back online..."
+echo "Creating a tar file of all the files in the site..."
 # -------------------------------------------------------------------------------------------------
+# The -C switch will 'cd' into the directory - this means we can create an archive which only
+# contains a single directory and therefore there will be a strip-components value of 1 needed.
 
-# Future versions of the script will need to pick up if the site is D6 or D7.  It is possible that
-# both of these commands can be run on D6 and D7 safely.
-
-# These are the commands for Drupal 6.
-# drush @${DEV_SITE_NAME} vset --always-set site_offline 1
-# drush @${BETA_SITE_NAME} vset --always-set site_offline 1
-
-# These commands work for Drupal 7.
-
-# Todo - this can be added back in later.
-####drush --root=/home/deploy/web/${PROJECT_NAME} vset maintenance_mode 0 --yes
-
-
+sudo -u deploy -i tar --create --file=/home/deploy/data_dumps/${PROJECT_NAME}_${DATE_TIME}.tar -C /home/deploy/projects/${PROJECT_NAME}/ web
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
 echo "Finished..."
 # -------------------------------------------------------------------------------------------------
+
+exit 0

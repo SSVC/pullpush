@@ -301,7 +301,7 @@ EOFSETTINGS
 
     drupal6)
 
-	# We will cpoy the file before changing it as changing it in place gets complicated when trying to excape the sudo command.
+	# We will cpoy the file before changing it as changing it in place gets complicated when trying to escape the sudo command.
 	cp /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/${USER}/settings.php.betapr${PROJECT_NAME}
 ##	echo "\$db_url = 'mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}'" >> /home/${USER}/settings.php.betapr${PROJECT_NAME}
 	echo "\$db_url = 'mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}';" >> /home/${USER}/settings.php.betapr${PROJECT_NAME}
