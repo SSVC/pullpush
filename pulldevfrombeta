@@ -498,7 +498,7 @@ sudo -k
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Finished - the developer copy of the site is at http://${USER}-pr-${PROJECT_NAME}.${SERVER_FQDN}..."
+echo "Finished - the developer copy of the site is at http://${USER}-pr-${PROJECT_NAME}.${SERVER_FQDN}"
 # -------------------------------------------------------------------------------------------------
 
 exit 0

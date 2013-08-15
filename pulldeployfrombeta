@@ -204,7 +204,7 @@ case "${PROJECT_TYPE}" in
 
     drupal7)
 
-	# We will cpoy the file before changing it as changing it in place gets complicated when trying to excape the sudo command.
+	# We will copy the file before changing it as changing it in place gets complicated when trying to escape the sudo command.
 	cp /home/deploy/projects/${PROJECT_NAME}/web/sites/default/default.settings.php /home/${USER}/settings.php.deploypr${PROJECT_NAME}
 	cat <<EOFSETTINGS >> /home/${USER}/settings.php.deploypr${PROJECT_NAME}
 

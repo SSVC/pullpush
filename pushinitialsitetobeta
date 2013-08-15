@@ -233,9 +233,16 @@ case "${PROJECT_TYPE}" in
 
         # Pull the files from the repository and remove the settings.php from SVN control.
 	sudo -u beta -i svn checkout http://localhost/svn/${PROJECT_NAME} /home/beta/projects/${PROJECT_NAME}/web
+
+	# Here we are going to copy the current settings.php file - which has come from the initial site - to the
+	# default.settings.php - this then becomes the default settings file which is used as the template when 
+	# other settings.php files are needed.
+	sudo -u beta -i cp /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/beta/projects/${PROJECT_NAME}/web/sites/default/default.settings.php
+
+	# Remove the settings.php file from SVN control.
 	sudo -u beta -i svn delete --keep-local /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php
 	sudo -u beta -i svn propset svn:ignore settings.php /home/beta/projects/${PROJECT_NAME}/web/sites/default
-	sudo -u beta -i "svn commit -m \"Remove the settings.php file from SVN control to prevent incorrect database connections.\" /home/beta/projects/${PROJECT_NAME}/web"
+	sudo -u beta -i "svn commit -m \"Remove the settings.php file from SVN control and check in an updated default.settings.php.\" /home/beta/projects/${PROJECT_NAME}/web"
 
 	# Here we need to run update to get the local revision number to match the new repository 
 	# revision number.  This is used in checks later.
@@ -405,7 +412,7 @@ sudo -k
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Finished - the new site is at http://beta-pr-${PROJECT_NAME}.${SERVER_FQDN}..."
+echo "Finished - the new site is at http://beta-pr-${PROJECT_NAME}.${SERVER_FQDN}"
 # -------------------------------------------------------------------------------------------------
 
 exit 0
