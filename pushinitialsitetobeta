@@ -332,7 +332,16 @@ sudo mkdir -p /etc/pullpush/projects
 case "${PROJECT_TYPE}" in
 
     drupal7)
-	sudo sh -c "echo PROJECT_TYPE=drupal7 >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo PROJECT_TYPE=drupal7 > /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo # Set to PUSH_USERS=true to get the users copied from livecopy to deploy. >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo #PUSH_USERS= >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo # Set to PUSH_TERMS=true to get the users copied from livecopy to deploy. >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo #PUSH_TERMS= >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo # Set to NODES_TO_PUSH=[comma separated list of content types - no spaces] which need to be copied from livecopy to deploy. >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo #NODES_TO_PUSH= >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+
 	;;
 
     drupal6)

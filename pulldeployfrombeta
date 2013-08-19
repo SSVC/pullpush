@@ -185,21 +185,29 @@ case "${PROJECT_TYPE}" in
         exit 1
 esac
 
-# Backup the beta DB.
+echo "Backing up the beta DB..."
 mkdir -p /home/${USER}/backups/beta_sites
 mysqldump betapr${PROJECT_NAME} > /home/${USER}/backups/beta_sites/${PROJECT_NAME}.sql
 
-# Load the DB from the backup.
+echo "Loading the DB from the backup..."
 mysql deploypr${PROJECT_NAME} < /home/${USER}/backups/beta_sites/${PROJECT_NAME}.sql
 
-# Put the current beta files into SVN.  This is necessary as site editors may have added content via the
-# admin interface and this will have included new files.
+echo "Putting the current beta files into SVN..."  
+# This is necessary as site editors may have added content via the admin interface and this will have
+# included new files.
 __check_beta_files_into_svn
 
-# Export files from SVN.
-sudo -u deploy -i "svn --force export http://localhost/svn/${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web"
+# Export files from SVN.  First we will need to delete all the existing files as export only exports
+# files and does not delete files which are in the destination but not in the repository.
 
-# Create and update the settings file.
+echo "Deleting any pre-existing deploy site files..."
+sudo -u deploy -i "rm -rf /home/deploy/projects/${PROJECT_NAME}/web"
+
+echo "Exporting the deploy site files..."
+##sudo -u deploy -i "svn --force export http://localhost/svn/${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web"
+sudo -u deploy -i "svn export http://localhost/svn/${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web"
+
+echo "Creating and updating the settings file..."
 case "${PROJECT_TYPE}" in
 
     drupal7)

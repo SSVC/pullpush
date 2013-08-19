@@ -1,4 +1,420 @@
 #!/bin/bash
+#===================================================================================
+#
+# FILE: pushlivecopydataintodeploy
+#
+# USAGE: pushlivecopydataintodeploy -p [project type]
+#
+# DESCRIPTION: This will push the data from the live copy into the deploy site.
+#
+# OPTIONS: see function ’usage’ below
+# NOTES: ---
+# AUTHOR: Kevin Bailey, kbailey@freewayprojects.com
+# COMPANY: Freeway Projects Limited
+#===================================================================================
+
+# Make sure only one Pullpush script is running at any one time.
+touch /var/lock/pullpush
+chmod --quiet 666 /var/lock/pullpush
+exec 9>/var/lock/pullpush
+if ! flock -n 9  ; then
+   echo "Another Pullpush script is currently running - try again later.";
+   exit 1
+fi
+
+# -------------------------------------------------------------------------------------------------
+# Set up global variables.
+#
+# We are going to explicitly set the script name variable.  Obviously the script name is available
+# as $0 - but this is not consistent and may or may not contain the path.  Also, this means we can
+# use the bash debugger without needing to handle the fact that $0 would contain something like
+# 'bashdb'.
+# -------------------------------------------------------------------------------------------------
+SCRIPT_NAME=pushlivecopydataintodeploy
+DATE_TIME=$(date +%Y%m%d-%H%M%S)
+
+# -------------------------------------------------------------------------------------------------
+# Set up the user to be able to run sudo commands - this will be revoked at the end of the script.
+# -------------------------------------------------------------------------------------------------
+sudo -v
+
+# -------------------------------------------------------------------------------------------------
+# Log all output from the script.
+# 
+# As we are going to be carrying out multiple steps and it is important we can see all the output
+# to be able to diagnose problems.
+# -------------------------------------------------------------------------------------------------
+
+# Create a place for the log files.
+sudo mkdir -p /var/log/pullpush
+sudo chmod 777 /var/log/pullpush
+
+# Create a pipe...
+tmppipe=$(mktemp -u)
+mkfifo ${tmppipe}
+
+# ...then start a tee process which takes as its input the pipe - and output to the logfile (and 
+# standard output) and then push the tee process into the background (subshell).
+tee < ${tmppipe} /var/log/pullpush/${DATE_TIME}_${USER}_${SCRIPT_NAME}.log &
+
+# Redirect both standard output and standard error to the pipe just created - these outputs
+# will then be directed via the pipe to standard output (the current shell) and the log file.
+exec &> ${tmppipe}
+
+# This sets up the pipe to be removed - it will only be fully dropped when no process is using it.
+rm ${tmppipe}
+
+# -------------------------------------------------------------------------------------------------
+# Import Pullpush functions.
+# -------------------------------------------------------------------------------------------------
+source /usr/local/share/pullpush/pullpush_functions
+
+# -------------------------------------------------------------------------------------------------
+# Local functions
+#
+# Here we will define all the functions used by this script.
+# -------------------------------------------------------------------------------------------------
+
+# Output a usage message - used when the parameters input are not correct.
+usage () {
+    echo "Usage: $SCRIPT_NAME -p [project name]"
+}
+
+# -------------------------------------------------------------------------------------------------
+# Testing parameters
+# -------------------------------------------------------------------------------------------------
+while getopts ":p:" opt; do
+    case $opt in
+	p)
+	    PROJECT_NAME=$OPTARG
+	    ;;
+	\?)
+	    echo "Invalid option: -$OPTARG" >&2
+	    usage
+	    exit 1
+	    ;;
+	:)
+	    echo "Option -$OPTARG requires an argument." >&2
+	    usage
+	    exit 1
+	    ;;
+    esac
+done
+
+# Check the parameter has had a value assigned.
+#if [ -z $PROJECT_NAME ]
+#then
+#    echo "The project name needs to be set."
+#    usage
+#    exit 1
+#fi
+
+# Check the project exists.
+if [ ! -e /home/beta/projects/${PROJECT_NAME}/web ]
+then
+    echo "The project does not appear to exist."
+    usage
+    exit 1
+fi
+
+# Load the project settings file or display an error if it does not exist.
+if [ -e /etc/pullpush/projects/${PROJECT_NAME}.conf ]
+then
+    source /etc/pullpush/projects/${PROJECT_NAME}.conf
+else
+    echo "ERROR - The project settings file /etc/pullpush/projects/${PROJECT_NAME}.conf not found."
+    exit 1
+fi
+
+# Load the configuration file and check it was loaded OK.
+__load_configuration_file
+
+if [ $? -ne 0 ]
+then
+    echo "Configuration file was not loaded."
+fi
+
+echo "All tests completed OK."
+echo "Project name: ${PROJECT_NAME}"
+
+echo 
+echo "Picked up from the project conf file..."
+echo "PUSH_USERS: $PUSH_USERS"
+echo "PUSH_TERMS: $PUSH_TERMS"
+echo "NODES_TO_PUSH: $NODES_TO_PUSH"
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Checking in case there is not data set to be pushed from livecopy to data..."
+# -------------------------------------------------------------------------------------------------
+##if [ ! ${PUSH_USERS} ] && [ ! ${PUSH_TERMS} ] && [ ${NODES_TO_PUSH}=="" ]
+##if [[ ${PUSH_USERS} != "true" ]] && [[ ${PUSH_TERMS} != "true" ]] && [[ ${NODES_TO_PUSH} == "" ]]
+if [[ ( ${PUSH_USERS} != "true" ) && ( ${PUSH_TERMS} != "true" ) && ( ${NODES_TO_PUSH} == "" ) ]]
+then
+
+    echo "WARNING - There currently the project configuration file is set to not push any data from livecopy to deploy."
+    echo "To set data which should be pushed look at the contents of /etc/pullpush/projects/${PROJECT_NAME}.conf"
+    exit 1
+
+fi
+
+echo "jumped test"
+
+
+case "${PROJECT_TYPE}" in
+
+    drupal7|drupal6)
+
+	echo "Adding or updating the data_export_import module to the livecopysite..."
+	# We are going to remove then re-install the module to avoid prompts and to make sure we have the latest version.
+	sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web --yes pm-disable data_export_import
+	sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web --yes pm-uninstall data_export_import
+	sudo -u livecopy -i rm -r /home/livecopy/projects/${PROJECT_NAME}/web/sites/all/modules/data_export_import
+	sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web pm-download data_export_import
+	sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web --yes pm-enable data_export_import
+
+	echo "Adding the data_export_import module to the deploy..."
+	# We are going to remove then re-install the module to avoid prompts and to make sure we have the latest version.
+	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web --yes pm-disable data_export_import
+	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web --yes pm-uninstall data_export_import
+	sudo -u deploy -i rm -r /home/deploy/projects/${PROJECT_NAME}/web/sites/all/modules/data_export_import
+	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web pm-download data_export_import
+	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web --yes pm-enable data_export_import
+
+	if [[ ${PUSH_USERS} == "true" ]]
+	then 
+	    echo "Pushing users from livecopy to deploy..."
+	# -------------------------------------------------------------------------------------------------
+	echo
+	echo `date`
+	echo "Copy the users across..."
+	# -------------------------------------------------------------------------------------------------
+	##USER_FILE_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex users")
+	USER_FILE_PRODUCED=$(sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web dei-ex users)
+
+	echo "USER_FILE_PRODUCED:${USER_FILE_PRODUCED}"
+
+
+	#ssh deploy@localhost "mkdir -p ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users"
+	#ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${FILENAME}"
+	#ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+
+	sudo -u deploy -i mkdir -p /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/users
+	sudo -u deploy -i cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED}
+	##ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web dei-im users --file=${USER_FILE_PRODUCED}
+
+
+	fi
+
+
+	if [[ ${PUSH_TERMS} == "true" ]]
+	then 
+	    echo "Pushing terms from livecopy to deploy..."
+
+	# -------------------------------------------------------------------------------------------------
+	echo
+	echo `date`
+	echo "Copy the terms across..."
+	# -------------------------------------------------------------------------------------------------
+	##USER_FILE_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex users")
+	TERM_FILE_PRODUCED=$(sudo -u livecopy drush --root=/home/livecopy/projects/${PROJECT_NAME}/web dei-ex terms)
+
+	echo "TERM_FILE_PRODUCED:${TERM_FILE_PRODUCED}"
+
+
+	#ssh deploy@localhost "mkdir -p ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users"
+	#ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${FILENAME}"
+	#ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+
+	sudo -u deploy -i mkdir -p /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/taxonomy_terms
+	sudo -u deploy -i cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/taxonomy_terms/${TERM_FILE_PRODUCED} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/taxonomy_terms/${TERM_FILE_PRODUCED}
+	##ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web dei-im terms --file=${TERM_FILE_PRODUCED}
+
+
+
+	fi
+
+
+	if [[ ${NODES_TO_PUSH} != "" ]]
+	then 
+
+	# -------------------------------------------------------------------------------------------------
+	echo
+	echo `date`
+	echo "Copy the nodes across..."
+	# -------------------------------------------------------------------------------------------------
+	##ssh livecopy@localhost "drush @livecopy_${PROJECT_NAME} dei-ex nodes --content-types=${NODE_CONTENT_TYPES}" > files.txt
+
+
+	##FILES_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex nodes --content-types=${NODE_CONTENT_TYPES}")
+	FILES_PRODUCED=$(sudo -u livecopy drush --root=/home/livecopy/projects/${PROJECT_NAME}/web dei-ex nodes --content-types=${NODES_TO_PUSH})
+
+
+
+	echo "FILES_PRODUCED:${FILES_PRODUCED}"
+
+
+
+	for FILENAME in $FILES_PRODUCED
+	do 
+	    echo "File being imported:${FILENAME}"
+
+	    #    ssh deploy@localhost "mkdir -p ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes"
+	    #    ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes/${FILENAME} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes/${FILENAME}"
+	    #    ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im nodes --file=${FILENAME}"
+
+	    sudo -u deploy -i mkdir -p /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/nodes
+	    sudo -u deploy -i cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/nodes/${FILENAME} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/nodes/${FILENAME}
+	    sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web dei-im nodes --file=${FILENAME}
+
+	done
+
+
+
+
+fi
+
+
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
+
+
+
+exit 0
+
+
+
+
+
+
+
+exit 0
+
+
+# -------------------------------------------------------------------------------------------------
+# The plan.
+#
+# For Drupal:
+# Install data_export_import module to both deploy and livecopy sites.
+# Copy users (if needed)
+# Copy terms (if needed)
+# Copy nodes (if needed)
+# -------------------------------------------------------------------------------------------------
+
+case "${PROJECT_TYPE}" in
+
+    drupal7|drupal6)
+
+	echo "Adding the data_export_import module to the livecopysite..."
+	sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web pm-download data_export_import
+	sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web --yes pm-enable data_export_import
+
+	echo "Adding the data_export_import module to the deploy..."
+	sudo -u deploy -i drush --root=/home/deploy/web/${PROJECT_NAME} pm-download data_export_import
+	sudo -u deploy -i drush --root=/home/deploy/web/${PROJECT_NAME} --yes pm-enable data_export_import
+
+
+exit 0
+
+	# -------------------------------------------------------------------------------------------------
+	echo
+	echo `date`
+	echo "Copy the users across..."
+	# -------------------------------------------------------------------------------------------------
+	##USER_FILE_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex users")
+	USER_FILE_PRODUCED=$(sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web dei-ex users)
+
+	echo "USER_FILE_PRODUCED:${USER_FILE_PRODUCED}"
+
+
+	#ssh deploy@localhost "mkdir -p ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users"
+	#ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${FILENAME}"
+	#ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+
+	sudo -u deploy -i mkdir -p /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/users
+	sudo -u deploy -i cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED}
+	##ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web dei-im users --file=${USER_FILE_PRODUCED}
+
+# HERE HERE HERE.
+	# -------------------------------------------------------------------------------------------------
+	echo
+	echo `date`
+	echo "Copy the terms across..."
+	# -------------------------------------------------------------------------------------------------
+	##USER_FILE_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex users")
+	TERM_FILE_PRODUCED=$(sudo -u livecopy drush --root=/home/livecopy/web/${PROJECT_NAME} dei-ex terms)
+
+	echo "TERM_FILE_PRODUCED:${TERM_FILE_PRODUCED}"
+
+
+	#ssh deploy@localhost "mkdir -p ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users"
+	#ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${FILENAME}"
+	#ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+
+	sudo -u deploy mkdir -p /home/deploy/web/${PROJECT_NAME}/sites/default/files/data_export_import/taxonomy_terms
+	sudo -u deploy cp /home/livecopy/web/${PROJECT_NAME}/sites/default/files/data_export_import/taxonomy_terms/${TERM_FILE_PRODUCED} /home/deploy/web/${PROJECT_NAME}/sites/default/files/data_export_import/taxonomy_terms/${TERM_FILE_PRODUCED}
+	##ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
+	sudo -u deploy drush --root=/home/deploy/web/${PROJECT_NAME} dei-im terms --file=${TERM_FILE_PRODUCED}
+
+
+
+	# -------------------------------------------------------------------------------------------------
+	echo
+	echo `date`
+	echo "Copy the nodes across..."
+	# -------------------------------------------------------------------------------------------------
+	##ssh livecopy@localhost "drush @livecopy_${PROJECT_NAME} dei-ex nodes --content-types=${NODE_CONTENT_TYPES}" > files.txt
+
+
+	##FILES_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex nodes --content-types=${NODE_CONTENT_TYPES}")
+	FILES_PRODUCED=$(sudo -u livecopy drush --root=/home/livecopy/web/${PROJECT_NAME} dei-ex nodes --content-types=${CONTENT_TYPES})
+
+
+
+	echo "FILES_PRODUCED:${FILES_PRODUCED}"
+
+
+
+	for FILENAME in $FILES_PRODUCED
+	do 
+	    echo "File being imported:${FILENAME}"
+
+	    #    ssh deploy@localhost "mkdir -p ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes"
+	    #    ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes/${FILENAME} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes/${FILENAME}"
+	    #    ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im nodes --file=${FILENAME}"
+
+	    sudo -u deploy mkdir -p /home/deploy/web/${PROJECT_NAME}/sites/default/files/data_export_import/nodes
+	    sudo -u deploy cp /home/livecopy/web/${PROJECT_NAME}/sites/default/files/data_export_import/nodes/${FILENAME} /home/deploy/web/${PROJECT_NAME}/sites/default/files/data_export_import/nodes/${FILENAME}
+	    sudo -u deploy drush --root=/home/deploy/web/${PROJECT_NAME} dei-im nodes --file=${FILENAME}
+
+	done
+
+
+
+
+
+
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
+
+
+
+exit 0
+
+
+
 
 # pushlivecopydataintodeploy
 # Push livecopy data into deploy
