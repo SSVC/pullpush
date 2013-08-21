@@ -3,7 +3,7 @@
 #
 # FILE: pullinitialsitefromsource
 #
-# USAGE: pullinitialsitefromsource [project type]
+# USAGE: pullinitialsitefromsource -t [project type] -i [initial site name (1 to 6 alphanumeric characters)]
 #
 # DESCRIPTION: This will create an initial site which will be a vanilla copy from a
 # framework.  It will achieve this by pulling down any source code needed from 

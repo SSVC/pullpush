@@ -161,11 +161,15 @@ echo "Project name: ${PROJECT_NAME}"
 # -------------------------------------------------------------------------------------------------
 # The plan.
 #
-# If necessary create the vhost and database.
-# Load the database from the db dump.
-# Remove any existing files.
-# Extract the site files from the data dump.
-# Append the database connection settings to the settings.php file.
+# Before this script is run the live copy should have been transmitted to the dev server from the
+# live server.  This should have:
+## Synchronised the site files in the document root from the live server to the dev server.
+## Dumped out the database to a dump file which is transferred over to the dev server.
+#
+# Steps which are part of the plan.
+## If necessary create the vhost and database.
+## Load the database from the db dump.
+## Append the database connection settings to the settings.php file.
 # -------------------------------------------------------------------------------------------------
 
 # Set up the database and database user.
@@ -193,17 +197,22 @@ fi
 # Load the DB from the backup.
 mysql livecopypr${PROJECT_NAME} < /home/livecopy/data_dumps/${PROJECT_NAME}_${DATETIME_STAMP}.sql
 
+
+: <<COMMENT_OUT3
+
+
 # Remove the exsiting site files.
 sudo -u livecopy rm -rf /home/livecopy/projects/${PROJECT_NAME}/web
 sudo -u livecopy -i mkdir -p /home/livecopy/projects/${PROJECT_NAME}/web
 sudo -u livecopy -i tar -x --file=/home/livecopy/data_dumps/${PROJECT_NAME}_${DATETIME_STAMP}.tar --directory=/home/livecopy/projects/${PROJECT_NAME}/web --strip-components=1
+COMMENT_OUT3
 
 # Update the settings file.
 case "${PROJECT_TYPE}" in
 
     drupal7)
 
-	# We will copy the file before changing it as changing it in place gets complicated when trying to excape the sudo command.
+	# We will copy the file before changing it as changing it in place gets complicated when trying to escape the sudo command.
 	cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/${USER}/settings.php.livecopypr${PROJECT_NAME}
 	cat <<EOFSETTINGS >> /home/${USER}/settings.php.livecopypr${PROJECT_NAME}
 

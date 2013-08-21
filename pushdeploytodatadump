@@ -140,30 +140,65 @@ echo "Project name: ${PROJECT_NAME}"
 # -------------------------------------------------------------------------------------------------
 # The plan.
 #
+# Put site into maintenance mode.
 # Clear caches on deploy site.
 # Dump out DB.
-# Tar up all files with under a single level directory.
 # -------------------------------------------------------------------------------------------------
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Clearing out the caches on the sites to trim the database and files/ before making the data dump..."
+echo "Putting the site into maintenance mode..."
+# -------------------------------------------------------------------------------------------------
+case "${PROJECT_TYPE}" in
+
+    drupal7)
+
+	echo "Setting the deploy site to maintenance mode..."
+	drush -r /home/beta/projects/${PROJECT_NAME}/web vset maintenance_mode 1 --yes
+        ;;
+
+    drupal6)
+
+	echo "Setting the deploy site to maintenance mode..."
+	drush -r /home/beta/projects/${PROJECT_NAME}/web vset site_offline 1 --yes
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
+
+# -------------------------------------------------------------------------------------------------
+echo
+echo `date`
+echo "Clearing out the caches on the site to trim the database and files/ before making the data dump..."
 # -------------------------------------------------------------------------------------------------
 
 # Bear in mind here that we may need to chmod the /files directory to 777 if we are not using Apache-ITK.
+# Clear out the caches on the deploy site.
+case "${PROJECT_TYPE}" in
 
-# Clear out the caches on the beta site.  As the dev copy will become a copy of the beta site we do
-# not want to pull down all the caches as well.  
-drush --root=/home/deploy/projects/${PROJECT_NAME}/web cache-clear all
+    drupal7|drupal6)
+
+	echo "Setting the deploy site to maintenance mode..."
+	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web cache-clear all
+        ;;
+
+    *)
+        echo "Error - Invalid project type."
+        exit 1
+esac
 
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
 echo "Dumping out the database to a file..."
 # -------------------------------------------------------------------------------------------------
-sudo -u deploy -i mkdir -p /home/deploy/data_dumps
-sudo -u deploy -i "mysqldump deploypr${PROJECT_NAME} > /home/deploy/data_dumps/${PROJECT_NAME}_${DATE_TIME}.sql"
+sudo -u deploy -i mkdir -p /home/deploy/projects/${PROJECT_NAME}/db
+sudo -u deploy -i "mysqldump deploypr${PROJECT_NAME} > /home/deploy/projects/${PROJECT_NAME}/db/database_dump.sql"
+
+: <<COMMENT_OUT1
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -204,6 +239,7 @@ case "${PROJECT_TYPE}" in
         echo "Error - Invalid project type."
         exit -1
 esac
+COMMENT_OUT1
 
 # -------------------------------------------------------------------------------------------------
 echo
