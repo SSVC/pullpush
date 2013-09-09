@@ -128,11 +128,11 @@ then
     exit 1
 fi
 
-# Check the data dump files exist.
-if [ ! -e /home/livecopy/data_dumps/${PROJECT_NAME}_${DATETIME_STAMP}.sql ] || [ ! -e /home/livecopy/data_dumps/${PROJECT_NAME}_${DATETIME_STAMP}.tar ]
+# Check the data dump file exists.
+if [ ! -e /home/livecopy/projects/${PROJECT_NAME}/db/database_dump.sql ]
 then
-    echo "One of the data dump files is missing."
-    echo "The script is expecting to be able to read the files /home/livecopy/data_dumps/${PROJECT_NAME}_${DATETIME_STAMP}.sql and /home/livecopy/data_dumps/${PROJECT_NAME}_${DATETIME_STAMP}.tar"
+    echo "The data dump file is missing."
+    echo "The script is expecting to be able to read the file /home/livecopy/projects/${PROJECT_NAME}/db/database_dump.sql."
 
     usage
     exit 1
@@ -199,7 +199,6 @@ mysql livecopypr${PROJECT_NAME} < /home/livecopy/data_dumps/${PROJECT_NAME}_${DA
 
 
 : <<COMMENT_OUT3
-
 
 # Remove the exsiting site files.
 sudo -u livecopy rm -rf /home/livecopy/projects/${PROJECT_NAME}/web

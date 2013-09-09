@@ -164,7 +164,7 @@ case "${PROJECT_TYPE}" in
 
     drupal7)
 
-	MAINTENANCE_MODE=$(drush --root=/home/beta/projects/${PROJECT_NAME}/web vget maintenance_mode)
+	MAINTENANCE_MODE=$(drush --root=/home/beta/projects/${PROJECT_NAME}/web vget maintenance_mode --exact)
 	case "${MAINTENANCE_MODE}" in
 
 	    "maintenance_mode: 1")
@@ -184,7 +184,7 @@ case "${PROJECT_TYPE}" in
 		;;
 
 	    *)
-		echo "Error - Invalid softlock choice."
+		echo "ERROR - can not determine maintenance mode."
 		exit 1
 	esac
         ;;
@@ -192,7 +192,7 @@ case "${PROJECT_TYPE}" in
 
     drupal6)
 
-	SITE_OFFLINE=$(drush --root=/home/beta/projects/${PROJECT_NAME}/web vget site_offline)
+	SITE_OFFLINE=$(drush --root=/home/beta/projects/${PROJECT_NAME}/web vget site_offline --exact)
 	case "${SITE_OFFLINE}" in
 
 	    "site_offline: 1")
@@ -212,7 +212,7 @@ case "${PROJECT_TYPE}" in
 		;;
 
 	    *)
-		echo "Error - Invalid softlock choice."
+		echo "ERROR - can not determine maintenance mode."
 		exit 1
 	esac
         ;;
