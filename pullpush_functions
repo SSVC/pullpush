@@ -84,17 +84,6 @@ __set_up_vhost () {
 
 __check_beta_files_into_svn () {
 
-    # -------------------------------------------------------------------------------------------------
-    echo
-    echo `date`
-    echo "Checking the status of the beta files and then committing them to SVN..."
-    # -------------------------------------------------------------------------------------------------
-    # As part of the first step in getting the dev copy up-to-date with the latest beta is to get all 
-    # beta files checked into SVN
-
-    # First of all we are going to copy the database dump into the code repository so that the whole site is in the repository.
-##    cp /home/${USER}/backups/beta_sites/${PROJECT_NAME}_${DATE_TIME}.sql /home/beta/projects/${PROJECT_NAME}/web/sites/default/files/${PROJECT_NAME}.sql
-
     # The only file changes this should pick up are the new data files which are in sites/default/files.  First we are 
     # going to output the changes to files/ and / and make sure they match.  If they don't match then there are non-data
     # files/directories which have been changed in the Drupal part of the site which needs to be looked into
@@ -139,18 +128,12 @@ __check_beta_files_into_svn () {
     # be an exact copy of beta and the output on the command line will show all file changes.
 
     echo "Adding all new files to svn control list..."
-    ## ssh beta@localhost "svn status ${BETA_DOCUMENT_ROOT} | grep \"^?\" | sed s/^?// | sed s/[[:space:]]*// | xargs -i svn add \"{}\"" 
-    ###    sudo -u beta sh -c "svn status /home/beta/projects/${PROJECT_NAME}/web | grep \"^?\" | sed s/^?// | sed s/[[:space:]]*// | xargs -i svn add \"{}\"" 
     sudo -u beta -i "svn status /home/beta/projects/${PROJECT_NAME}/web | grep \"^?\" | sed s/^?// | sed s/[[:space:]]*// | xargs -i svn add \"{}\"" 
 
     echo "If files have been deleted then SVN needs to mark them for deletion..."
-    ## ssh beta@localhost "svn status ${BETA_DOCUMENT_ROOT} | grep \"^\!\" | sed s/^\!// | sed s/[[:space:]]*// | xargs -i svn delete \"{}\""
-    ###    sudo -u beta sh -c "svn status /home/beta/projects/${PROJECT_NAME}/web | grep \"^\!\" | sed s/^\!// | sed s/[[:space:]]*// | xargs -i svn delete \"{}\""
     sudo -u beta -i "svn status /home/beta/projects/${PROJECT_NAME}/web | grep \"^\!\" | sed s/^\!// | sed s/[[:space:]]*// | xargs -i svn delete \"{}\""
 
     echo "Committing and deleting the files which have changed in the beta files/ directory..."
-    ##ssh beta@localhost "svn commit -m \"$DATE_TIME - Committing added/changed/deleted data files from beta into repository.\" ${BETA_DOCUMENT_ROOT} "
-    ###    sudo -u beta sh -c "svn commit -m \"${DATE_TIME} - Committing added/changed/deleted data files from beta into repository.\" /home/beta/projects/${PROJECT_NAME}/web "
     sudo -u beta -i "svn commit -m \"${DATE_TIME} - Committing added/changed/deleted data files from beta into repository.\" /home/beta/projects/${PROJECT_NAME}/web "
 
     # Now we will run an update - the reason for this is so the revision number of beta local and
@@ -167,8 +150,12 @@ __check_beta_files_into_svn () {
 
     # Here we will get the latest revision number and save a copy of the database dump file with that
     # revision number so it can be matched up to the code in the repository.
-    echo "Creating a database copy with the matching revision number..."
+    echo "Creating a database copy with the matching revision number - this will NOT be checked into the code repository but saved under the beta user account..."
+
+    mkdir -p /home/${USER}/backups/beta_sites
+    mysqldump betapr${PROJECT_NAME} > /home/${USER}/backups/beta_sites/${PROJECT_NAME}_for_svn.sql
+
     new_beta_revision=$(svn info /home/beta/projects/${PROJECT_NAME}/web | grep '^Revision:' | sed s/^Revision:[[:space:]]*// )
     sudo -u beta -i "mkdir -p /home/beta/backups"
-    sudo -u beta -i "cp /home/${USER}/backups/beta_sites/${PROJECT_NAME}.sql /home/beta/backups/${PROJECT_NAME}_r${new_beta_revision}.sql"
+    sudo -u beta -i "cp /home/${USER}/backups/beta_sites/${PROJECT_NAME}_for_svn.sql /home/beta/backups/${PROJECT_NAME}_r${new_beta_revision}.sql"
 }

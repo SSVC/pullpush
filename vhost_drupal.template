@@ -1,6 +1,7 @@
 <VirtualHost *:80>
 
     ServerName vhostname.serverfqdn
+    ServerAlias *.vhostname.serverfqdn
     ServerAdmin serveradminemail
 
     DocumentRoot documentroot

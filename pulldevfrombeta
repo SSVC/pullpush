@@ -184,8 +184,8 @@ case "${PROJECT_TYPE}" in
 		;;
 
 	    *)
-		echo "ERROR - can not determine maintenance mode."
-		exit 1
+		echo "WARNING - can not determine maintenance mode."
+		# exit 1
 	esac
         ;;
 
@@ -422,7 +422,7 @@ else
     # Here we are removing any extra files.  Errors may be caused if users have added files to beta which
     # have the same name as any files which are being added by the developer - so it is necessary to remove
     # the files from the developers copy before pulling down the new beta files.
-    svn status /home/${USER}/projects/${PROJECT_NAME}/web | grep "^?" | sed s/^?// | sed s/[[:space:]]*// | xargs -r rm -r
+    svn status /home/${USER}/projects/${PROJECT_NAME}/web | grep "^?" | sed s/^?// | sed s/[[:space:]]*// | xargs -r -d '\n' rm -r
 
     # The --quiet option tells 'svn status' to not output names of files which are not under
     # version control.

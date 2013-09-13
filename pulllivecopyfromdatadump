@@ -3,7 +3,7 @@
 #
 # FILE: pulllivecopyfromdatadump
 #
-# USAGE: pulllivecopyfromdatadump -p [project type] -d [datetime stamp]
+# USAGE: pulllivecopyfromdatadump -p [project type]
 #
 # DESCRIPTION: This will create a livecopy site from a data dump.
 #
@@ -77,19 +77,16 @@ source /usr/local/share/pullpush/pullpush_functions
 
 # Output a usage message - used when the parameters input are not correct.
 usage () {
-    echo "Usage: $SCRIPT_NAME -p [project name] -d [datetime stamp]"
+    echo "Usage: $SCRIPT_NAME -p [project name]"
 }
 
 # -------------------------------------------------------------------------------------------------
 # Testing parameters
 # -------------------------------------------------------------------------------------------------
-while getopts ":p:d:" opt; do
+while getopts ":p:" opt; do
     case $opt in
 	p)
 	    PROJECT_NAME=$OPTARG
-	    ;;
-	d)
-	    DATETIME_STAMP=$OPTARG
 	    ;;
 	\?)
 	    echo "Invalid option: -$OPTARG" >&2
@@ -107,7 +104,7 @@ done
 # Check the parameter has had a value assigned.
 if [ -z $PROJECT_NAME ]
 then
-    echo "The project name needs to be set."
+    echo "ERROR - The project name needs to be set."
     usage
     exit 1
 fi
@@ -115,15 +112,7 @@ fi
 # Check the project exists.
 if [ ! -e /home/beta/projects/${PROJECT_NAME}/web ]
 then
-    echo "The project does not appear to exist."
-    usage
-    exit 1
-fi
-
-# Check the parameter has had a value assigned.
-if [ -z $DATETIME_STAMP ]
-then
-    echo "The datetime stamp needs to be set."
+    echo "ERROR - The project does not appear to exist."
     usage
     exit 1
 fi
@@ -131,9 +120,8 @@ fi
 # Check the data dump file exists.
 if [ ! -e /home/livecopy/projects/${PROJECT_NAME}/db/database_dump.sql ]
 then
-    echo "The data dump file is missing."
+    echo "ERROR - The data dump file is missing."
     echo "The script is expecting to be able to read the file /home/livecopy/projects/${PROJECT_NAME}/db/database_dump.sql."
-
     usage
     exit 1
 fi
@@ -177,8 +165,11 @@ DATABASE_NAME=livecopypr${PROJECT_NAME}
 DATABASE_USER=livecopypr${PROJECT_NAME}
 DATABASE_PASSWORD=`cat /dev/urandom | base64 | tr -d '[:punct:]' | tr -d '[:digit:]' | tr -d '[:upper:]' | cut -c1-10 | head -1`
 
-# If necessary create the database - if not then update the user. 
-if [ ! -e /home/livecopy/projects/${PROJECT_NAME}/web ]
+# If necessary create the database and the vhost.  We are going to check the vhost
+# conf file exists - and will assume that if the vhost has not been set up then 
+# the DB has not been set up.
+# if [ ! -e /home/livecopy/projects/${PROJECT_NAME}/web ]
+if [ ! -e /etc/apache2/sites-available/livecopy-pr-${PROJECT_NAME} ]
 then
 
     echo "Setting up the vhost..."
@@ -190,13 +181,17 @@ else
 
     # Here we are going to update the privileges so we have the password in this script and we can add it to the settings file.  
     # Also, it is a good idea to refresh the password to prevent connecting to the wrong database.
-    echo "Updating database user..."
+    echo "Updating database user as database has already been created..."
     mysql --execute="GRANT ALL ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';" ${DATABASE_NAME}
 fi
 
 # Load the DB from the backup.
-mysql livecopypr${PROJECT_NAME} < /home/livecopy/data_dumps/${PROJECT_NAME}_${DATETIME_STAMP}.sql
+##mysql livecopypr${PROJECT_NAME} < /home/livecopy/data_dumps/${PROJECT_NAME}_${DATETIME_STAMP}.sql
 
+# todo - we need to drop the database and recreate it.
+mysqladmin --force drop livecopypr${PROJECT_NAME}
+mysqladmin create livecopypr${PROJECT_NAME}
+mysql livecopypr${PROJECT_NAME} < /home/livecopy/projects/${PROJECT_NAME}/db/database_dump.sql
 
 : <<COMMENT_OUT3
 
@@ -212,6 +207,11 @@ case "${PROJECT_TYPE}" in
     drupal7)
 
 	# We will copy the file before changing it as changing it in place gets complicated when trying to escape the sudo command.
+	# Changing permissions may be neccessary as we do not know what permissions the files have been sent down with.  We are 
+	# also going to explicitly set the temp file directory and the private file directory to make them suitable for the dev
+	# server.
+	sudo -u livecopy -i chmod -R 755 /home/livecopy/projects/${PROJECT_NAME}/web
+	sudo -u livecopy -i chmod -R 777 /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/files
 	cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/${USER}/settings.php.livecopypr${PROJECT_NAME}
 	cat <<EOFSETTINGS >> /home/${USER}/settings.php.livecopypr${PROJECT_NAME}
 
@@ -230,6 +230,8 @@ case "${PROJECT_TYPE}" in
     ),
   ),
 );
+
+\$conf['file_temporary_path'] = '/tmp'; 
 
 EOFSETTINGS
 
@@ -255,7 +257,7 @@ esac
 case "${PROJECT_TYPE}" in
 
     drupal7|drupal6)
-	drush --root=/home/livecopy/projects/${PROJECT_NAME}/web cache-clear all
+	sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web cache-clear all
         ;;
 
     *)

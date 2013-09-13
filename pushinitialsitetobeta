@@ -3,7 +3,7 @@
 #
 # FILE: pushinitialsitetobeta
 #
-# USAGE: pushinitialsitetobeta [project type] [initial site name] [project name]
+# USAGE: pushinitialsitetobeta -t [project type] -i [initial site name] -p [project name (1 to 6 alphanumeric characters)]
 #
 # DESCRIPTION: This will take an initial site and create a beta site from it.
 #
