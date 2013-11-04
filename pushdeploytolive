@@ -1,0 +1,3 @@
+#!/bin/bash
+
+echo "This script will use the live server FTP/SSH login to push the deploy site all the way to the live server.  After uploading, the live server needs to load the DB dump and make the site available."

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo "This script will pull down the site files from the live server and create a new copy of the livecopy site."
+echo "Before it is run the live site admins need to put the live site into read-only mode and create a database dump file."
