@@ -198,48 +198,15 @@ echo "Dumping out the database to a file..."
 sudo -u deploy -i mkdir -p /home/deploy/projects/${PROJECT_NAME}/db
 sudo -u deploy -i "mysqldump deploypr${PROJECT_NAME} > /home/deploy/projects/${PROJECT_NAME}/db/database_dump.sql"
 
-: <<COMMENT_OUT1
-
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
 echo "Creating a tar file of all the files in the site..."
 # -------------------------------------------------------------------------------------------------
+
 # The -C switch will 'cd' into the directory - this means we can create an archive which only
 # contains a single directory and therefore there will be a strip-components value of 1 needed.
-
-# As a safety we are going to mv the data base settings file before tarring up the files - we will
-# reinstate it after the tar command.  This is to prevent the deployed copy of the site from
-# accidentally connecting to the wrong database.
-case "${PROJECT_TYPE}" in
-
-    drupal7|drupal6)
-
-	# We will copy the file before changing it as changing it in place gets complicated when trying to escape the sudo command.
-	cp /home/deploy/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/${USER}/settings.php.bak
-	;;
-
-    *)
-        echo "Error - Invalid project type."
-        exit -1
-esac
-
-sudo -u deploy -i tar --create --file=/home/deploy/data_dumps/${PROJECT_NAME}_${DATE_TIME}.tar -C /home/deploy/projects/${PROJECT_NAME}/ web
-
-# And here we re-instate the deploy site's settings file.
-case "${PROJECT_TYPE}" in
-
-    drupal7|drupal6)
-
-	# We will copy the file before changing it as changing it in place gets complicated when trying to escape the sudo command.
-	cp /home/deploy/projects/${PROJECT_NAME}/web/sites/default/settings.php.bak /home/${USER}/settings.php
-	;;
-
-    *)
-        echo "Error - Invalid project type."
-        exit -1
-esac
-COMMENT_OUT1
+sudo -u deploy -i tar --create --file=/home/deploy/projects/${PROJECT_NAME}/deploy_dumps/site_files.tar -C /home/deploy/projects/${PROJECT_NAME}/ web
 
 # -------------------------------------------------------------------------------------------------
 echo
