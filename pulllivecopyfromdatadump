@@ -193,13 +193,10 @@ mysqladmin --force drop livecopypr${PROJECT_NAME}
 mysqladmin create livecopypr${PROJECT_NAME}
 mysql livecopypr${PROJECT_NAME} < /home/livecopy/projects/${PROJECT_NAME}/db/database_dump.sql
 
-: <<COMMENT_OUT3
-
 # Remove the exsiting site files.
 sudo -u livecopy rm -rf /home/livecopy/projects/${PROJECT_NAME}/web
 sudo -u livecopy -i mkdir -p /home/livecopy/projects/${PROJECT_NAME}/web
-sudo -u livecopy -i tar -x --file=/home/livecopy/data_dumps/${PROJECT_NAME}_${DATETIME_STAMP}.tar --directory=/home/livecopy/projects/${PROJECT_NAME}/web --strip-components=1
-COMMENT_OUT3
+sudo -u livecopy -i tar -x --file=/home/livecopy/projects/${PROJECT_NAME}/live_dumps/site_files.tar --directory=/home/livecopy/projects/${PROJECT_NAME}/web --strip-components=1
 
 # Update the settings file.
 case "${PROJECT_TYPE}" in
