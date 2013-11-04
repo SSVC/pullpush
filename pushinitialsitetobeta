@@ -169,11 +169,11 @@ echo "Project name: ${PROJECT_NAME}"
 # -------------------------------------------------------------------------------------------------
 echo
 echo `date`
-echo "Make backup copy of the initial site..."
+echo "Make database dump file..."
 # -------------------------------------------------------------------------------------------------
 mkdir -p ~/backups/initial_sites
 ##sudo mysqldump ${USER}is${INITIAL_SITE_NAME} > /home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}_${DATE_TIME}.sql
-sudo mysqldump ${USER}is${INITIAL_SITE_NAME} > /home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}.sql
+mysqldump ${USER}is${INITIAL_SITE_NAME} > /home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}.sql
 ####tar --create --file=/home/${USER}/backups/initial_sites/${USER}is${INITIAL_SITE_NAME}_${DATE_TIME}.tar /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web
 
 # -------------------------------------------------------------------------------------------------
@@ -242,11 +242,13 @@ case "${PROJECT_TYPE}" in
 	# Remove the settings.php file from SVN control.
 	sudo -u beta -i svn delete --keep-local /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php
 	sudo -u beta -i svn propset svn:ignore settings.php /home/beta/projects/${PROJECT_NAME}/web/sites/default
-	sudo -u beta -i "svn commit -m \"Remove the settings.php file from SVN control and check in an updated default.settings.php.\" /home/beta/projects/${PROJECT_NAME}/web"
+
+	sudo -u beta -i sh -c "svn commit -m \"Remove the settings.php file from SVN control and check in an updated default.settings.php.\" /home/beta/projects/${PROJECT_NAME}/web"
+	#sudo -u beta -i svn commit -q /home/beta/projects/${PROJECT_NAME}/web
 
 	# Here we need to run update to get the local revision number to match the new repository 
 	# revision number.  This is used in checks later.
-	sudo -u beta -i "svn update /home/beta/projects/${PROJECT_NAME}/web"
+	sudo -u beta -i svn update /home/beta/projects/${PROJECT_NAME}/web
 
 	if [ "${WEB_SERVER_TYPE}" = "apache2prefork" ]
 	then
@@ -280,7 +282,7 @@ case "${PROJECT_TYPE}" in
 
     drupal7)
 
-	# We will cpoy the file before changing it as changing it in place gets complicated when trying to excape the sudo command.
+	# We will copy the file before changing it as changing it in place gets complicated when trying to excape the sudo command.
 	cp /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/${USER}/settings.php.betapr${PROJECT_NAME}
 	cat <<EOFSETTINGS >> /home/${USER}/settings.php.betapr${PROJECT_NAME}
 
@@ -308,7 +310,7 @@ EOFSETTINGS
 
     drupal6)
 
-	# We will cpoy the file before changing it as changing it in place gets complicated when trying to escape the sudo command.
+	# We will copy the file before changing it as changing it in place gets complicated when trying to escape the sudo command.
 	cp /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/${USER}/settings.php.betapr${PROJECT_NAME}
 ##	echo "\$db_url = 'mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}'" >> /home/${USER}/settings.php.betapr${PROJECT_NAME}
 	echo "\$db_url = 'mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}';" >> /home/${USER}/settings.php.betapr${PROJECT_NAME}
@@ -341,7 +343,6 @@ case "${PROJECT_TYPE}" in
 	sudo sh -c "echo #PUSH_TERMS= >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	sudo sh -c "echo # Set to NODES_TO_PUSH=[comma separated list of content types - no spaces] which need to be copied from livecopy to deploy. >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	sudo sh -c "echo #NODES_TO_PUSH= >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
-
 	;;
 
     drupal6)

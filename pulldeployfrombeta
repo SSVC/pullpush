@@ -201,11 +201,13 @@ __check_beta_files_into_svn
 # files and does not delete files which are in the destination but not in the repository.
 
 echo "Deleting any pre-existing deploy site files..."
-sudo -u deploy -i "rm -rf /home/deploy/projects/${PROJECT_NAME}/web"
+###sudo -u deploy -i "rm -rf /home/deploy/projects/${PROJECT_NAME}/web"
+sudo -u deploy -i sh -c "rm -rf /home/deploy/projects/${PROJECT_NAME}/web"
 
 echo "Exporting the deploy site files..."
 ##sudo -u deploy -i "svn --force export http://localhost/svn/${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web"
-sudo -u deploy -i "svn export http://localhost/svn/${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web"
+###sudo -u deploy -i "svn export http://localhost/svn/${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web"
+sudo -u deploy -i sh -c "svn export http://localhost/svn/${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web"
 
 echo "Creating and updating the settings file..."
 case "${PROJECT_TYPE}" in
@@ -234,7 +236,7 @@ case "${PROJECT_TYPE}" in
 
 EOFSETTINGS
 
-	sudo -u deploy -i cp /home/${USER}/settings.php.deploypr${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/settings.php
+	sudo -u deploy -i sh -c "cp /home/${USER}/settings.php.deploypr${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/settings.php"
 	rm /home/${USER}/settings.php.deploypr${PROJECT_NAME}
 	;;
 
@@ -243,7 +245,7 @@ EOFSETTINGS
 	# We will copy the file before changing it as changing it in place gets complicated when trying to excape the sudo command.
 	cp /home/deploy/projects/${PROJECT_NAME}/web/sites/default/default.settings.php /home/${USER}/settings.php.deploypr${PROJECT_NAME}
 	echo "\$db_url = 'mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}';" >> /home/${USER}/settings.php.deploypr${PROJECT_NAME}
-	sudo -u deploy -i cp /home/${USER}/settings.php.deploypr${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/settings.php
+	sudo -u deploy -i sh -c "cp /home/${USER}/settings.php.deploypr${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/settings.php"
 	rm /home/${USER}/settings.php.deploypr${PROJECT_NAME}
 	;;
 

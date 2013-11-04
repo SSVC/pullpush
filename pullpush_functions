@@ -128,13 +128,16 @@ __check_beta_files_into_svn () {
     # be an exact copy of beta and the output on the command line will show all file changes.
 
     echo "Adding all new files to svn control list..."
-    sudo -u beta -i "svn status /home/beta/projects/${PROJECT_NAME}/web | grep \"^?\" | sed s/^?// | sed s/[[:space:]]*// | xargs -i svn add \"{}\"" 
+    ###sudo -u beta -i "svn status /home/beta/projects/${PROJECT_NAME}/web | grep \"^?\" | sed s/^?// | sed s/[[:space:]]*// | xargs -i svn add \"{}\"" 
+    sudo -u beta -i sh -c "svn status /home/beta/projects/${PROJECT_NAME}/web | grep \"^?\" | sed s/^?// | sed s/[[:space:]]*// | xargs -i svn add \"{}\"" 
 
     echo "If files have been deleted then SVN needs to mark them for deletion..."
-    sudo -u beta -i "svn status /home/beta/projects/${PROJECT_NAME}/web | grep \"^\!\" | sed s/^\!// | sed s/[[:space:]]*// | xargs -i svn delete \"{}\""
+    ###sudo -u beta -i "svn status /home/beta/projects/${PROJECT_NAME}/web | grep \"^\!\" | sed s/^\!// | sed s/[[:space:]]*// | xargs -i svn delete \"{}\""
+    sudo -u beta -i sh -c "svn status /home/beta/projects/${PROJECT_NAME}/web | grep \"^\!\" | sed s/^\!// | sed s/[[:space:]]*// | xargs -i svn delete \"{}\""
 
     echo "Committing and deleting the files which have changed in the beta files/ directory..."
-    sudo -u beta -i "svn commit -m \"${DATE_TIME} - Committing added/changed/deleted data files from beta into repository.\" /home/beta/projects/${PROJECT_NAME}/web "
+    ### sudo -u beta -i "svn commit -m \"${DATE_TIME} - Committing added/changed/deleted data files from beta into repository.\" /home/beta/projects/${PROJECT_NAME}/web "
+    sudo -u beta -i sh -c "svn commit -m \"${DATE_TIME} - Committing added/changed/deleted data files from beta into repository.\" /home/beta/projects/${PROJECT_NAME}/web "
 
     # Now we will run an update - the reason for this is so the revision number of beta local and
     # the repository will match and can therefore be tested before running the next commit from beta.
@@ -146,7 +149,8 @@ __check_beta_files_into_svn () {
     # checks are carried out later.
     echo "SVN update the local beta copy to get the revision number to match the repository revision..."
     ##ssh beta@localhost "svn update ${BETA_DOCUMENT_ROOT}"
-    sudo -u beta -i "svn update /home/beta/projects/${PROJECT_NAME}/web"
+    ###sudo -u beta -i "svn update /home/beta/projects/${PROJECT_NAME}/web"
+    sudo -u beta -i sh -c "svn update /home/beta/projects/${PROJECT_NAME}/web"
 
     # Here we will get the latest revision number and save a copy of the database dump file with that
     # revision number so it can be matched up to the code in the repository.
@@ -156,6 +160,8 @@ __check_beta_files_into_svn () {
     mysqldump betapr${PROJECT_NAME} > /home/${USER}/backups/beta_sites/${PROJECT_NAME}_for_svn.sql
 
     new_beta_revision=$(svn info /home/beta/projects/${PROJECT_NAME}/web | grep '^Revision:' | sed s/^Revision:[[:space:]]*// )
-    sudo -u beta -i "mkdir -p /home/beta/backups"
-    sudo -u beta -i "cp /home/${USER}/backups/beta_sites/${PROJECT_NAME}_for_svn.sql /home/beta/backups/${PROJECT_NAME}_r${new_beta_revision}.sql"
+    ###sudo -u beta -i "mkdir -p /home/beta/backups"
+    sudo -u beta -i sh -c "mkdir -p /home/beta/backups"
+    ###sudo -u beta -i "cp /home/${USER}/backups/beta_sites/${PROJECT_NAME}_for_svn.sql /home/beta/backups/${PROJECT_NAME}_r${new_beta_revision}.sql"
+    sudo -u beta -i sh -c "cp /home/${USER}/backups/beta_sites/${PROJECT_NAME}_for_svn.sql /home/beta/backups/${PROJECT_NAME}_r${new_beta_revision}.sql"
 }
