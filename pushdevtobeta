@@ -287,7 +287,7 @@ echo "SVN update beta site files from SVN..."
 # -------------------------------------------------------------------------------------------------
 
 ##ssh beta@localhost "svn update /home/beta/web/${PROJECT_NAME}"
-sudo -u beta -i "svn update /home/beta/projects/${PROJECT_NAME}/web"
+sudo -u beta -i sh -c "svn update /home/beta/projects/${PROJECT_NAME}/web"
 
 # NB Now we need to chmod permissions on the files/ directory to enable the web server to manipulate
 # the files which have just been pulled out from SVN.
