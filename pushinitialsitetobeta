@@ -232,23 +232,23 @@ case "${PROJECT_TYPE}" in
     drupal7|drupal6)
 
         # Pull the files from the repository and remove the settings.php from SVN control.
-	sudo -u beta -i svn checkout http://localhost/svn/${PROJECT_NAME} /home/beta/projects/${PROJECT_NAME}/web
+	sudo -u beta -i sh -c "svn checkout http://localhost/svn/${PROJECT_NAME} /home/beta/projects/${PROJECT_NAME}/web"
 
 	# Here we are going to copy the current settings.php file - which has come from the initial site - to the
 	# default.settings.php - this then becomes the default settings file which is used as the template when 
 	# other settings.php files are needed.
-	sudo -u beta -i cp /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/beta/projects/${PROJECT_NAME}/web/sites/default/default.settings.php
+	sudo -u beta -i sh -c "cp /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/beta/projects/${PROJECT_NAME}/web/sites/default/default.settings.php"
 
 	# Remove the settings.php file from SVN control.
-	sudo -u beta -i svn delete --keep-local /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php
-	sudo -u beta -i svn propset svn:ignore settings.php /home/beta/projects/${PROJECT_NAME}/web/sites/default
+	sudo -u beta -i sh -c "svn delete --keep-local /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php"
+	sudo -u beta -i sh -c "svn propset svn:ignore settings.php /home/beta/projects/${PROJECT_NAME}/web/sites/default"
 
 	sudo -u beta -i sh -c "svn commit -m \"Remove the settings.php file from SVN control and check in an updated default.settings.php.\" /home/beta/projects/${PROJECT_NAME}/web"
 	#sudo -u beta -i svn commit -q /home/beta/projects/${PROJECT_NAME}/web
 
 	# Here we need to run update to get the local revision number to match the new repository 
 	# revision number.  This is used in checks later.
-	sudo -u beta -i svn update /home/beta/projects/${PROJECT_NAME}/web
+	sudo -u beta -i sh -c "svn update /home/beta/projects/${PROJECT_NAME}/web"
 
 	if [ "${WEB_SERVER_TYPE}" = "apache2prefork" ]
 	then
@@ -304,7 +304,7 @@ case "${PROJECT_TYPE}" in
 
 EOFSETTINGS
 
-	sudo -u beta -i cp /home/${USER}/settings.php.betapr${PROJECT_NAME} /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php
+	sudo -u beta -i sh -c "cp /home/${USER}/settings.php.betapr${PROJECT_NAME} /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php"
 	rm /home/${USER}/settings.php.betapr${PROJECT_NAME}
 	;;
 
@@ -314,7 +314,7 @@ EOFSETTINGS
 	cp /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/${USER}/settings.php.betapr${PROJECT_NAME}
 ##	echo "\$db_url = 'mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}'" >> /home/${USER}/settings.php.betapr${PROJECT_NAME}
 	echo "\$db_url = 'mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}';" >> /home/${USER}/settings.php.betapr${PROJECT_NAME}
-	sudo -u beta -i cp /home/${USER}/settings.php.betapr${PROJECT_NAME} /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php
+	sudo -u beta -i sh -c "cp /home/${USER}/settings.php.betapr${PROJECT_NAME} /home/beta/projects/${PROJECT_NAME}/web/sites/default/settings.php"
 	rm /home/${USER}/settings.php.betapr${PROJECT_NAME}
 	;;
 
@@ -337,16 +337,24 @@ case "${PROJECT_TYPE}" in
 	sudo sh -c "echo PROJECT_TYPE=drupal7 > /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	sudo sh -c "echo >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	sudo sh -c "echo >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
-	sudo sh -c "echo # Set to PUSH_USERS=true to get the users copied from livecopy to deploy. >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
-	sudo sh -c "echo #PUSH_USERS= >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
-	sudo sh -c "echo # Set to PUSH_TERMS=true to get the users copied from livecopy to deploy. >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
-	sudo sh -c "echo #PUSH_TERMS= >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
-	sudo sh -c "echo # Set to NODES_TO_PUSH=[comma separated list of content types - no spaces] which need to be copied from livecopy to deploy. >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
-	sudo sh -c "echo #NODES_TO_PUSH= >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo \"# Set to PUSH_USERS=true to get the users copied from livecopy to deploy.\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo \"#PUSH_USERS=\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo \"# Set to PUSH_TERMS=true to get the users copied from livecopy to deploy.\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo \"#PUSH_TERMS=\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo \"# Set to NODES_TO_PUSH=[comma separated list of content types - no spaces] which need to be copied from livecopy to deploy.\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo \"#NODES_TO_PUSH=\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	;;
 
     drupal6)
 	sudo sh -c "echo PROJECT_TYPE=drupal6 >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo \"# Set to PUSH_USERS=true to get the users copied from livecopy to deploy.\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo \"#PUSH_USERS=\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo \"# Set to PUSH_TERMS=true to get the users copied from livecopy to deploy.\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo \"#PUSH_TERMS=\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo \"# Set to NODES_TO_PUSH=[comma separated list of content types - no spaces] which need to be copied from livecopy to deploy.\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo \"#NODES_TO_PUSH=\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	;;
 
     *)

@@ -168,19 +168,19 @@ case "${PROJECT_TYPE}" in
 
 	echo "Adding or updating the data_export_import module to the livecopysite..."
 	# We are going to remove then re-install the module to avoid prompts and to make sure we have the latest version.
-	sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web --yes pm-disable data_export_import
-	sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web --yes pm-uninstall data_export_import
-	sudo -u livecopy -i rm -r /home/livecopy/projects/${PROJECT_NAME}/web/sites/all/modules/data_export_import
-	sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web pm-download data_export_import
-	sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web --yes pm-enable data_export_import
+	sudo -u livecopy -i sh -c "drush --root=/home/livecopy/projects/${PROJECT_NAME}/web --yes pm-disable data_export_import"
+	sudo -u livecopy -i sh -c "drush --root=/home/livecopy/projects/${PROJECT_NAME}/web --yes pm-uninstall data_export_import"
+	sudo -u livecopy -i sh -c "rm -r /home/livecopy/projects/${PROJECT_NAME}/web/sites/all/modules/data_export_import"
+	sudo -u livecopy -i sh -c "drush --root=/home/livecopy/projects/${PROJECT_NAME}/web pm-download data_export_import"
+	sudo -u livecopy -i sh -c "drush --root=/home/livecopy/projects/${PROJECT_NAME}/web --yes pm-enable data_export_import"
 
 	echo "Adding the data_export_import module to the deploy..."
 	# We are going to remove then re-install the module to avoid prompts and to make sure we have the latest version.
-	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web --yes pm-disable data_export_import
-	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web --yes pm-uninstall data_export_import
-	sudo -u deploy -i rm -r /home/deploy/projects/${PROJECT_NAME}/web/sites/all/modules/data_export_import
-	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web pm-download data_export_import
-	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web --yes pm-enable data_export_import
+	sudo -u deploy -i sh -c "drush --root=/home/deploy/projects/${PROJECT_NAME}/web --yes pm-disable data_export_import"
+	sudo -u deploy -i sh -c "drush --root=/home/deploy/projects/${PROJECT_NAME}/web --yes pm-uninstall data_export_import"
+	sudo -u deploy -i sh -c "rm -r /home/deploy/projects/${PROJECT_NAME}/web/sites/all/modules/data_export_import"
+	sudo -u deploy -i sh -c "drush --root=/home/deploy/projects/${PROJECT_NAME}/web pm-download data_export_import"
+	sudo -u deploy -i sh -c "drush --root=/home/deploy/projects/${PROJECT_NAME}/web --yes pm-enable data_export_import"
 
 	if [[ ${PUSH_USERS} == "true" ]]
 	then 
@@ -191,7 +191,8 @@ case "${PROJECT_TYPE}" in
 	echo "Copy the users across..."
 	# -------------------------------------------------------------------------------------------------
 	##USER_FILE_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex users")
-	USER_FILE_PRODUCED=$(sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web dei-ex users)
+	###USER_FILE_PRODUCED=$(sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web dei-ex users)
+	USER_FILE_PRODUCED=$(sudo -u livecopy -i sh -c "drush --root=/home/livecopy/projects/${PROJECT_NAME}/web dei-ex users")
 
 	echo "USER_FILE_PRODUCED:${USER_FILE_PRODUCED}"
 
@@ -200,10 +201,10 @@ case "${PROJECT_TYPE}" in
 	#ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${FILENAME}"
 	#ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
 
-	sudo -u deploy -i mkdir -p /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/users
-	sudo -u deploy -i cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED}
+	sudo -u deploy -i sh -c "mkdir -p /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/users"
+	sudo -u deploy -i sh -c "cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED}"
 	##ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
-	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web dei-im users --file=${USER_FILE_PRODUCED}
+	sudo -u deploy -i sh -c "drush --root=/home/deploy/projects/${PROJECT_NAME}/web dei-im users --file=${USER_FILE_PRODUCED}"
 
 
 	fi
@@ -219,7 +220,8 @@ case "${PROJECT_TYPE}" in
 	echo "Copy the terms across..."
 	# -------------------------------------------------------------------------------------------------
 	##USER_FILE_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex users")
-	TERM_FILE_PRODUCED=$(sudo -u livecopy drush --root=/home/livecopy/projects/${PROJECT_NAME}/web dei-ex terms)
+	###TERM_FILE_PRODUCED=$(sudo -u livecopy drush --root=/home/livecopy/projects/${PROJECT_NAME}/web dei-ex terms)
+	TERM_FILE_PRODUCED=$(sudo -u livecopy -i sh -c "drush --root=/home/livecopy/projects/${PROJECT_NAME}/web dei-ex terms")
 
 	echo "TERM_FILE_PRODUCED:${TERM_FILE_PRODUCED}"
 
@@ -228,10 +230,10 @@ case "${PROJECT_TYPE}" in
 	#ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${USER_FILE_PRODUCED} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/users/${FILENAME}"
 	#ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
 
-	sudo -u deploy -i mkdir -p /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/taxonomy_terms
-	sudo -u deploy -i cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/taxonomy_terms/${TERM_FILE_PRODUCED} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/taxonomy_terms/${TERM_FILE_PRODUCED}
+	sudo -u deploy -i sh -c "mkdir -p /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/taxonomy_terms"
+	sudo -u deploy -i sh -c "cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/taxonomy_terms/${TERM_FILE_PRODUCED} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/taxonomy_terms/${TERM_FILE_PRODUCED}"
 	##ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im users --file=${USER_FILE_PRODUCED}"
-	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web dei-im terms --file=${TERM_FILE_PRODUCED}
+	sudo -u deploy -i sh -c "drush --root=/home/deploy/projects/${PROJECT_NAME}/web dei-im terms --file=${TERM_FILE_PRODUCED}"
 
 
 
@@ -250,7 +252,8 @@ case "${PROJECT_TYPE}" in
 
 
 	##FILES_PRODUCED=$(ssh livecopy@localhost "drush ${LIVECOPY_DRUSH_ALIAS} dei-ex nodes --content-types=${NODE_CONTENT_TYPES}")
-	FILES_PRODUCED=$(sudo -u livecopy drush --root=/home/livecopy/projects/${PROJECT_NAME}/web dei-ex nodes --content-types=${NODES_TO_PUSH})
+	###FILES_PRODUCED=$(sudo -u livecopy drush --root=/home/livecopy/projects/${PROJECT_NAME}/web dei-ex nodes --content-types=${NODES_TO_PUSH})
+	FILES_PRODUCED=$(sudo -u livecopy -i sh -c "drush --root=/home/livecopy/projects/${PROJECT_NAME}/web dei-ex nodes --content-types=${NODES_TO_PUSH}")
 
 
 
@@ -266,26 +269,18 @@ case "${PROJECT_TYPE}" in
 	    #    ssh deploy@localhost "cp ${LIVECOPY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes/${FILENAME} ${DEPLOY_DOCUMENT_ROOT}/sites/default/files/data_export_import/nodes/${FILENAME}"
 	    #    ssh deploy@localhost "drush ${DEPLOY_DRUSH_ALIAS} dei-im nodes --file=${FILENAME}"
 
-	    sudo -u deploy -i mkdir -p /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/nodes
-	    sudo -u deploy -i cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/nodes/${FILENAME} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/nodes/${FILENAME}
-	    sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web dei-im nodes --file=${FILENAME}
+	    sudo -u deploy -i sh -c "mkdir -p /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/nodes"
+	    sudo -u deploy -i sh -c "cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/nodes/${FILENAME} /home/deploy/projects/${PROJECT_NAME}/web/sites/default/files/data_export_import/nodes/${FILENAME}"
+	    sudo -u deploy -i sh -c "drush --root=/home/deploy/projects/${PROJECT_NAME}/web dei-im nodes --file=${FILENAME}"
 
 	done
-
-
-
-
 fi
-
-
         ;;
 
     *)
         echo "Error - Invalid project type."
         exit 1
 esac
-
-
 
 exit 0
 

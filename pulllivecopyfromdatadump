@@ -118,10 +118,10 @@ then
 fi
 
 # Check the data dump file exists.
-if [ ! -e /home/livecopy/projects/${PROJECT_NAME}/db/database_dump.sql ]
+if [ ! -e /home/livecopy/projects/${PROJECT_NAME}/live_dumps/database_dump.sql ]
 then
     echo "ERROR - The data dump file is missing."
-    echo "The script is expecting to be able to read the file /home/livecopy/projects/${PROJECT_NAME}/db/database_dump.sql."
+    echo "The script is expecting to be able to read the file /home/livecopy/projects/${PROJECT_NAME}/live_dumps/database_dump.sql."
     usage
     exit 1
 fi
@@ -191,12 +191,13 @@ fi
 # todo - we need to drop the database and recreate it.
 mysqladmin --force drop livecopypr${PROJECT_NAME}
 mysqladmin create livecopypr${PROJECT_NAME}
-mysql livecopypr${PROJECT_NAME} < /home/livecopy/projects/${PROJECT_NAME}/db/database_dump.sql
+mysql livecopypr${PROJECT_NAME} < /home/livecopy/projects/${PROJECT_NAME}/live_dumps/database_dump.sql
 
 # Remove the exsiting site files.
-sudo -u livecopy rm -rf /home/livecopy/projects/${PROJECT_NAME}/web
-sudo -u livecopy -i mkdir -p /home/livecopy/projects/${PROJECT_NAME}/web
-sudo -u livecopy -i tar -x --file=/home/livecopy/projects/${PROJECT_NAME}/live_dumps/site_files.tar --directory=/home/livecopy/projects/${PROJECT_NAME}/web --strip-components=1
+sudo -u livecopy -i sh -c "rm -rf /home/livecopy/projects/${PROJECT_NAME}/web"
+sudo -u livecopy -i sh -c "mkdir -p /home/livecopy/projects/${PROJECT_NAME}/web"
+sudo -u livecopy -i sh -c "tar -x --file=/home/livecopy/projects/${PROJECT_NAME}/live_dumps/site_files.tar --directory=/home/livecopy/projects/${PROJECT_NAME}/web --strip-components=1"
+
 
 # Update the settings file.
 case "${PROJECT_TYPE}" in
@@ -207,8 +208,8 @@ case "${PROJECT_TYPE}" in
 	# Changing permissions may be neccessary as we do not know what permissions the files have been sent down with.  We are 
 	# also going to explicitly set the temp file directory and the private file directory to make them suitable for the dev
 	# server.
-	sudo -u livecopy -i chmod -R 755 /home/livecopy/projects/${PROJECT_NAME}/web
-	sudo -u livecopy -i chmod -R 777 /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/files
+	sudo -u livecopy -i sh -c "chmod -R 755 /home/livecopy/projects/${PROJECT_NAME}/web"
+	sudo -u livecopy -i sh -c "chmod -R 777 /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/files"
 	cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/${USER}/settings.php.livecopypr${PROJECT_NAME}
 	cat <<EOFSETTINGS >> /home/${USER}/settings.php.livecopypr${PROJECT_NAME}
 
@@ -232,7 +233,7 @@ case "${PROJECT_TYPE}" in
 
 EOFSETTINGS
 
-	sudo -u livecopy -i cp /home/${USER}/settings.php.livecopypr${PROJECT_NAME} /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/settings.php
+	sudo -u livecopy -i sh -c "cp /home/${USER}/settings.php.livecopypr${PROJECT_NAME} /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/settings.php"
 	rm /home/${USER}/settings.php.livecopypr${PROJECT_NAME}
 	;;
 
@@ -241,7 +242,7 @@ EOFSETTINGS
 	# We will copy the file before changing it as changing it in place gets complicated when trying to excape the sudo command.
 	cp /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/${USER}/settings.php.livecopypr${PROJECT_NAME}
 	echo "\$db_url = 'mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost/${DATABASE_NAME}';" >> /home/${USER}/settings.php.livecopypr${PROJECT_NAME}
-	sudo -u livecopy -i cp /home/${USER}/settings.php.livecopypr${PROJECT_NAME} /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/settings.php
+	sudo -u livecopy -i sh -c "cp /home/${USER}/settings.php.livecopypr${PROJECT_NAME} /home/livecopy/projects/${PROJECT_NAME}/web/sites/default/settings.php"
 	rm /home/${USER}/settings.php.livecopypr${PROJECT_NAME}
 	;;
 
@@ -254,7 +255,7 @@ esac
 case "${PROJECT_TYPE}" in
 
     drupal7|drupal6)
-	sudo -u livecopy -i drush --root=/home/livecopy/projects/${PROJECT_NAME}/web cache-clear all
+	sudo -u livecopy -i sh -c "drush --root=/home/livecopy/projects/${PROJECT_NAME}/web cache-clear all"
         ;;
 
     *)

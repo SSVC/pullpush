@@ -182,7 +182,7 @@ case "${PROJECT_TYPE}" in
     drupal7|drupal6)
 
 	echo "Setting the deploy site to maintenance mode..."
-	sudo -u deploy -i drush --root=/home/deploy/projects/${PROJECT_NAME}/web cache-clear all
+	sudo -u deploy -i sh -c "drush --root=/home/deploy/projects/${PROJECT_NAME}/web cache-clear all"
         ;;
 
     *)
@@ -195,8 +195,9 @@ echo
 echo `date`
 echo "Dumping out the database to a file..."
 # -------------------------------------------------------------------------------------------------
-sudo -u deploy -i mkdir -p /home/deploy/projects/${PROJECT_NAME}/db
-sudo -u deploy -i "mysqldump deploypr${PROJECT_NAME} > /home/deploy/projects/${PROJECT_NAME}/db/database_dump.sql"
+sudo -u deploy -i sh -c "mkdir -p /home/deploy/projects/${PROJECT_NAME}/deploy_dumps"
+###sudo -u deploy -i sh -c "mkdir -p /home/deploy/projects/${PROJECT_NAME}/db"
+sudo -u deploy -i sh -c "mysqldump deploypr${PROJECT_NAME} > /home/deploy/projects/${PROJECT_NAME}/deploy_dumps/database_dump.sql"
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -206,7 +207,8 @@ echo "Creating a tar file of all the files in the site..."
 
 # The -C switch will 'cd' into the directory - this means we can create an archive which only
 # contains a single directory and therefore there will be a strip-components value of 1 needed.
-sudo -u deploy -i tar --create --file=/home/deploy/projects/${PROJECT_NAME}/deploy_dumps/site_files.tar -C /home/deploy/projects/${PROJECT_NAME}/ web
+sudo -u deploy -i sh -c "mkdir -p /home/deploy/projects/${PROJECT_NAME}/deploy_dumps"
+sudo -u deploy -i sh -c "tar --create --file=/home/deploy/projects/${PROJECT_NAME}/deploy_dumps/site_files.tar -C /home/deploy/projects/${PROJECT_NAME}/ web"
 
 # -------------------------------------------------------------------------------------------------
 echo
