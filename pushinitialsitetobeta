@@ -376,7 +376,7 @@ echo "Set up the beta vhost..."
 ##    sudo chown beta:beta /home/beta/projects
 ##fi
 
-__set_up_vhost beta-pr-${PROJECT_NAME} /home/beta/projects/${PROJECT_NAME}/web
+__set_up_vhost beta-pr-${PROJECT_NAME} /home/beta/projects/${PROJECT_NAME}/web beta
 
 
 # -------------------------------------------------------------------------------------------------

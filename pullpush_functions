@@ -49,6 +49,7 @@ __set_up_vhost () {
 
     VHOST_NAME=${1}
     DOC_ROOT=${2}
+    ASSIGN_USER_ID=${3}
 
     case "${SERVER_TYPE}" in
 
@@ -66,7 +67,7 @@ __set_up_vhost () {
 
 	    # Edit the configuration file.  There may be a better way to do this.
             sudo sed -i "s|documentroot|${DOC_ROOT}|g" /etc/apache2/sites-available/${VHOST_NAME}
-            sudo sed -i "s/username/${USER}/g" /etc/apache2/sites-available/${VHOST_NAME}
+            sudo sed -i "s/username/${ASSIGN_USER_ID}/g" /etc/apache2/sites-available/${VHOST_NAME}
             sudo sed -i "s/vhostname/${VHOST_NAME}/g" /etc/apache2/sites-available/${VHOST_NAME}
             sudo sed -i "s/serverfqdn/${SERVER_FQDN}/g" /etc/apache2/sites-available/${VHOST_NAME}
             sudo sed -i "s/serveradminemail/${SERVER_ADMIN_EMAIL}/g" /etc/apache2/sites-available/${VHOST_NAME}

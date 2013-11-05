@@ -159,7 +159,7 @@ if [ ! -e /home/deploy/projects/${PROJECT_NAME}/web ]
 then
 
     # Set up the vhost.
-    __set_up_vhost deploy-pr-${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web
+    __set_up_vhost deploy-pr-${PROJECT_NAME} /home/deploy/projects/${PROJECT_NAME}/web deploy
 
 
     echo "Creating database..."

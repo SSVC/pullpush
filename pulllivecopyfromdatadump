@@ -173,7 +173,7 @@ if [ ! -e /etc/apache2/sites-available/livecopy-pr-${PROJECT_NAME} ]
 then
 
     echo "Setting up the vhost..."
-    __set_up_vhost livecopy-pr-${PROJECT_NAME} /home/livecopy/projects/${PROJECT_NAME}/web
+    __set_up_vhost livecopy-pr-${PROJECT_NAME} /home/livecopy/projects/${PROJECT_NAME}/web livecopy
 
     echo "Creating database..."
     __create_mysql_database_and_user_account ${DATABASE_NAME} ${DATABASE_USER} ${DATABASE_PASSWORD}

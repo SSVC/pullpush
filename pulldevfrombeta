@@ -391,7 +391,7 @@ EOFSETTINGS
     esac
 
     echo "Setting up the vhost..."
-    __set_up_vhost ${USER}-pr-${PROJECT_NAME} /home/${USER}/projects/${PROJECT_NAME}/web
+    __set_up_vhost ${USER}-pr-${PROJECT_NAME} /home/${USER}/projects/${PROJECT_NAME}/web ${USER}
 
 else
     echo "The dev copy of the site already exists so we will update it..."

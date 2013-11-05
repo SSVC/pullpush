@@ -200,7 +200,7 @@ echo `date`
 echo "Set up the vhost for the site..."
 # -------------------------------------------------------------------------------------------------
 
-__set_up_vhost ${USER}-is-${INITIAL_SITE_NAME} /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web
+__set_up_vhost ${USER}-is-${INITIAL_SITE_NAME} /home/${USER}/initial_sites/${INITIAL_SITE_NAME}/web ${USER}
 
 # -------------------------------------------------------------------------------------------------
 echo
