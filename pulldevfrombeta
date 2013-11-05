@@ -167,7 +167,7 @@ case "${PROJECT_TYPE}" in
 	MAINTENANCE_MODE=$(drush --root=/home/beta/projects/${PROJECT_NAME}/web vget maintenance_mode --exact)
 	case "${MAINTENANCE_MODE}" in
 
-	    "maintenance_mode: 1")
+	    "maintenance_mode: 1"|"maintenance_mode: '1'")
 		echo "The beta site is currently in maintenance mode which indicates that a dev has pulled a copy and set the softlock."
 		echo "You can still pull a copy of the beta site to your dev copy but if you push changes you may prevent another developer from pushing updates."
 
@@ -179,7 +179,7 @@ case "${PROJECT_TYPE}" in
 		echo "Continuing with the pull from beta..."
 		;;
 
-	    "maintenance_mode: 0")
+	    "maintenance_mode: 0"|"maintenance_mode: '0'")
 		echo "The site is not in maintenance mode."
 		;;
 
