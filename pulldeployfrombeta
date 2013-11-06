@@ -229,7 +229,7 @@ case "${PROJECT_TYPE}" in
       'host' => 'localhost',
       'port' => '',
       'driver' => 'mysql',
-      'prefix' => '',
+      'prefix' => '${DATABASE_PREFIX}',
     ),
   ),
 );

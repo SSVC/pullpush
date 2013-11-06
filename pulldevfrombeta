@@ -371,7 +371,7 @@ then
       'host' => 'localhost',
       'port' => '',
       'driver' => 'mysql',
-      'prefix' => '',
+      'prefix' => '${DATABASE_PREFIX}',
     ),
   ),
 );
