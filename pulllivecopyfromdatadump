@@ -149,13 +149,9 @@ echo "Project name: ${PROJECT_NAME}"
 # -------------------------------------------------------------------------------------------------
 # The plan.
 #
-# Before this script is run the live copy should have been transmitted to the dev server from the
-# live server.  This should have:
-## Synchronised the site files in the document root from the live server to the dev server.
-## Dumped out the database to a dump file which is transferred over to the dev server.
-#
-# Steps which are part of the plan.
+## Check dump files have been sent to the dev server.
 ## If necessary create the vhost and database.
+## Unzip the site files.
 ## Load the database from the db dump.
 ## Append the database connection settings to the settings.php file.
 # -------------------------------------------------------------------------------------------------
@@ -193,12 +189,11 @@ mysqladmin --force drop livecopypr${PROJECT_NAME}
 mysqladmin create livecopypr${PROJECT_NAME}
 mysql livecopypr${PROJECT_NAME} < /home/livecopy/projects/${PROJECT_NAME}/live_dumps/database_dump.sql
 
-# Remove the exsiting site files.
+# Remove the exsiting site files and unzip the live site files.
 sudo -u livecopy -i sh -c "rm -rf /home/livecopy/projects/${PROJECT_NAME}/web"
 sudo -u livecopy -i sh -c "mkdir -p /home/livecopy/projects/${PROJECT_NAME}/web"
 sudo -u livecopy -i sh -c "gzip -d /home/livecopy/projects/${PROJECT_NAME}/live_dumps/site_files.tar.gz"
 sudo -u livecopy -i sh -c "tar -x --file=/home/livecopy/projects/${PROJECT_NAME}/live_dumps/site_files.tar --directory=/home/livecopy/projects/${PROJECT_NAME}/web --strip-components=1"
-
 
 # Update the settings file.
 case "${PROJECT_TYPE}" in

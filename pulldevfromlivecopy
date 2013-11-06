@@ -1,9 +1,9 @@
 #!/bin/bash
 #===================================================================================
 #
-# FILE: pulldevfromdatadump
+# FILE: pulldevfromlivecopy
 #
-# USAGE: pulldevfromdatadump -p [project type]
+# USAGE: pulldevfromlivecopy -p [project type]
 #
 # DESCRIPTION: This will overwrite a dev site with a copy from a data dump.
 #
@@ -30,7 +30,7 @@ fi
 # use the bash debugger without needing to handle the fact that $0 would contain something like
 # 'bashdb'.
 # -------------------------------------------------------------------------------------------------
-SCRIPT_NAME=pulldevfromdatadump
+SCRIPT_NAME=pulldevfromlivecopy
 DATE_TIME=$(date +%Y%m%d-%H%M%S)
 
 # -------------------------------------------------------------------------------------------------
@@ -117,11 +117,10 @@ then
     exit 1
 fi
 
-# Check the data dump file exists.
-if [ ! -e /home/livecopy/projects/${PROJECT_NAME}/live_dumps/database_dump.sql ]
+# Check the livecopy site exists.
+if [ ! -e /home/livecopy/projects/${PROJECT_NAME}/web ]
 then
-    echo "ERROR - The data dump file is missing."
-    echo "The script is expecting to be able to read the file /home/livecopy/projects/${PROJECT_NAME}/live_dumps/database_dump.sql."
+    echo "ERROR - The livecopy site does not exist."
     usage
     exit 1
 fi
@@ -149,27 +148,39 @@ echo "Project name: ${PROJECT_NAME}"
 # -------------------------------------------------------------------------------------------------
 # The plan.
 #
-# Before this script is run the live copy should have been transmitted to the dev server from the
-# live server.  This should have:
-## Synchronised the site files in the document root from the live server to the dev server.
-## Dumped out the database to a dump file which is transferred over to the dev server.
+# Before this script is run the livecopy site should be in place.
 #
 # Steps which are part of the plan.
 ## Check that the project exists and a dev copy exists.
+## Check the livecopy site exists.
+## Clear out the livecopy caches.
 ## Make a copy of the settings file.
 ## Copy the files from the livecopy site over the dev files using rsync.
 ## Copy back in the settings file.
-## Dump out the database.
-## Load the database from the db dump.
+## Dump out the livecopy database.
+## Load the dev database from the livecopy db dump.
 # -------------------------------------------------------------------------------------------------
+
+# Clear out livecopy caches.  This should not be needed but is defensively put in here in case the 
+# livecopy has been manually set up.
+#case "${PROJECT_TYPE}" in
+
+#    drupal7|drupal6)
+#	sudo -u livecopy -i sh -c "drush --root=/home/livecopy/projects/${PROJECT_NAME}/web cache-clear all"
+#        ;;
+
+#    *)
+#        echo "Error - Invalid project type."
+#        exit 1
+#esac
 
 # Make a copy of the settings file.
 case "${PROJECT_TYPE}" in
 
     drupal7|drupal6)
 
-	chmod 777 /home/${USER}/settings.php.dev.datadumpload.${PROJECT_NAME}
-	cp /home/${USER}/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/${USER}/settings.php.dev.datadumpload.${PROJECT_NAME}
+	chmod 777 /home/${USER}/settings.php.dev.livecopyload.${PROJECT_NAME}
+	cp /home/${USER}/projects/${PROJECT_NAME}/web/sites/default/settings.php /home/${USER}/settings.php.dev.livecopyload.${PROJECT_NAME}
 	;;
     *)
         echo "Error - Invalid project type."
@@ -188,7 +199,7 @@ case "${PROJECT_TYPE}" in
 	sudo chmod 777 /home/${USER}/projects/${PROJECT_NAME}/web/sites/default
 	rm /home/${USER}/projects/${PROJECT_NAME}/web/sites/default/settings.php
 
-	cp /home/${USER}/settings.php.dev.datadumpload.${PROJECT_NAME} /home/${USER}/projects/${PROJECT_NAME}/web/sites/default/settings.php
+	cp /home/${USER}/settings.php.dev.livecopyload.${PROJECT_NAME} /home/${USER}/projects/${PROJECT_NAME}/web/sites/default/settings.php
 	;;
     *)
         echo "Error - Invalid project type."
@@ -200,9 +211,8 @@ echo
 echo `date`
 echo "Dumping out the database to a file..."
 # -------------------------------------------------------------------------------------------------
-sudo -u livecopy -i sh -c "mkdir -p /home/livecopy/projects/${PROJECT_NAME}/livecopy_dumps"
-###sudo -u deploy -i sh -c "mkdir -p /home/deploy/projects/${PROJECT_NAME}/db"
-sudo -u livecopy -i sh -c "mysqldump livecopypr${PROJECT_NAME} > /home/livecopy/projects/${PROJECT_NAME}/livecopy_dumps/database_dump.sql"
+mkdir -p /home/${USER}/projects/${PROJECT_NAME}/livecopy_dumps
+mysqldump livecopypr${PROJECT_NAME} > /home/${USER}/projects/${PROJECT_NAME}/livecopy_dumps/database_dump.sql
 
 # -------------------------------------------------------------------------------------------------
 echo
@@ -212,7 +222,7 @@ echo "Load database over top of existing database..."
 mysqladmin --force drop ${USER}pr${PROJECT_NAME}
 mysqladmin create ${USER}pr${PROJECT_NAME}
 
-mysql ${USER}pr${PROJECT_NAME} < /home/livecopy/projects/${PROJECT_NAME}/livecopy_dumps/database_dump.sql
+mysql ${USER}pr${PROJECT_NAME} < /home/${USER}/projects/${PROJECT_NAME}/livecopy_dumps/database_dump.sql
 
 # -------------------------------------------------------------------------------------------------
 echo
