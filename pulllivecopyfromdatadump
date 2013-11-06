@@ -196,6 +196,7 @@ mysql livecopypr${PROJECT_NAME} < /home/livecopy/projects/${PROJECT_NAME}/live_d
 # Remove the exsiting site files.
 sudo -u livecopy -i sh -c "rm -rf /home/livecopy/projects/${PROJECT_NAME}/web"
 sudo -u livecopy -i sh -c "mkdir -p /home/livecopy/projects/${PROJECT_NAME}/web"
+sudo -u livecopy -i sh -c "gzip -d /home/livecopy/projects/${PROJECT_NAME}/live_dumps/site_files.tar.gz"
 sudo -u livecopy -i sh -c "tar -x --file=/home/livecopy/projects/${PROJECT_NAME}/live_dumps/site_files.tar --directory=/home/livecopy/projects/${PROJECT_NAME}/web --strip-components=1"
 
 

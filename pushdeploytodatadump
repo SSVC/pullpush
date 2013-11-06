@@ -209,6 +209,7 @@ echo "Creating a tar file of all the files in the site..."
 # contains a single directory and therefore there will be a strip-components value of 1 needed.
 sudo -u deploy -i sh -c "mkdir -p /home/deploy/projects/${PROJECT_NAME}/deploy_dumps"
 sudo -u deploy -i sh -c "tar --create --file=/home/deploy/projects/${PROJECT_NAME}/deploy_dumps/site_files.tar -C /home/deploy/projects/${PROJECT_NAME}/ web"
+sudo -u deploy -i sh -c "gzip /home/deploy/projects/${PROJECT_NAME}/deploy_dumps/site_files.tar"
 
 # -------------------------------------------------------------------------------------------------
 echo
