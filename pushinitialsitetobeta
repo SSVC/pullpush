@@ -335,7 +335,7 @@ case "${PROJECT_TYPE}" in
 
     drupal7)
 	sudo sh -c "echo PROJECT_TYPE=drupal7 > /etc/pullpush/projects/${PROJECT_NAME}.conf"
-	sudo sh -c "echo DATABASE_PREFIX= > /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo DATABASE_PREFIX= >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	sudo sh -c "echo >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	sudo sh -c "echo >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	sudo sh -c "echo \"# Set to PUSH_USERS=true to get the users copied from livecopy to deploy.\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
@@ -347,8 +347,8 @@ case "${PROJECT_TYPE}" in
 	;;
 
     drupal6)
-	sudo sh -c "echo PROJECT_TYPE=drupal6 >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
-	sudo sh -c "echo DATABASE_PREFIX= > /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo PROJECT_TYPE=drupal6 > /etc/pullpush/projects/${PROJECT_NAME}.conf"
+	sudo sh -c "echo DATABASE_PREFIX= >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	sudo sh -c "echo >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	sudo sh -c "echo >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
 	sudo sh -c "echo \"# Set to PUSH_USERS=true to get the users copied from livecopy to deploy.\" >> /etc/pullpush/projects/${PROJECT_NAME}.conf"
